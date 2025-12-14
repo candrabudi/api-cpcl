@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 use Laravel\Lumen\Exceptions\Handler as ExceptionHandler;
 use Symfony\Component\HttpKernel\Exception\HttpException;
-use Throwable;
 
 class Handler extends ExceptionHandler
 {
@@ -28,12 +27,11 @@ class Handler extends ExceptionHandler
      *
      * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
      *
-     * @param  \Throwable  $exception
      * @return void
      *
      * @throws \Exception
      */
-    public function report(Throwable $exception)
+    public function report(\Throwable $exception)
     {
         parent::report($exception);
     }
@@ -41,14 +39,31 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Throwable  $exception
+     * @param \Illuminate\Http\Request $request
+     *
      * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
      *
      * @throws \Throwable
      */
-    public function render($request, Throwable $exception)
+    public function render($request, \Throwable $exception)
     {
-        return parent::render($request, $exception);
+        if ($exception instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Route not found',
+                'errors' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Internal Server Error',
+            'errors' => config('app.debug') ? [
+                'exception' => class_basename($exception),
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+            ] : null,
+        ], 500);
     }
 }

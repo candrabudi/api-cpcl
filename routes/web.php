@@ -14,10 +14,10 @@ $router->get('/', function () {
 });
 
 $router->group(['prefix' => 'api'], function () use ($router) {
-    $router->post('login', 'AuthController@login');
+    $router->post('/auth/login', 'AuthController@login');
 
     $router->group(['middleware' => 'auth'], function () use ($router) {
-        $router->post('logout', 'AuthController@logout');
+        $router->post('/auth/logout', 'AuthController@logout');
 
         $router->group(['prefix' => 'profile'], function () use ($router) {
             $router->get('/', 'ProfileController@show');

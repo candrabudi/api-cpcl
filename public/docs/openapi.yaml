@@ -6,7 +6,8 @@ info:
   description: CPCL Service API Documentation
 
 servers:
-  - url: http://localhost:8000/api
+  - url: http://localhost:8000
+  - url: https://cpcl.dinanfarm.com
 
 paths:
   /api/auth/login:

@@ -1,6 +1,16 @@
 <?php
 
 /** @var Laravel\Lumen\Routing\Router $router */
+$router->get('/', function () {
+    return response()->json([
+        'project' => 'CPCL API',
+        'type' => 'Government Assistance Management',
+        'environment' => app()->environment(),
+        'version' => 'v1',
+        'status' => 'running',
+        'timestamp' => now()->toIso8601String(),
+    ]);
+});
 $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('login', 'AuthController@login');
 

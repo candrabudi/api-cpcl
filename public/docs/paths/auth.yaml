@@ -15,10 +15,10 @@ login:
             properties:
               login:
                 type: string
-                example: johndoe
+                example: admin
               password:
                 type: string
-                example: secret123
+                example: Admin@123
     responses:
       '200':
         $ref: '../components/responses.yaml#/AuthLoginSuccess'

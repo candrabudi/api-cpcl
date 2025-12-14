@@ -1,14 +1,15 @@
 <?php
 
 /** @var Laravel\Lumen\Routing\Router $router */
+use Carbon\Carbon;
+
 $router->get('/', function () {
     return response()->json([
         'project' => 'CPCL API',
         'type' => 'Government Assistance Management',
-        'environment' => app()->environment(),
         'version' => 'v1',
         'status' => 'running',
-        'timestamp' => now()->toIso8601String(),
+        'timestamp' => Carbon::now()->toIso8601String(),
     ]);
 });
 $router->group(['prefix' => 'api'], function () use ($router) {

@@ -345,3 +345,209 @@ GroupFieldUpdateRequest:
       type: array
       items:
         $ref: './schemas.yaml#/GroupFieldRowValueUpdate'
+
+
+CpclDocumentListItem:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    cpcl_number:
+      type: string
+      nullable: true
+      example: CPCL-2025-001
+    title:
+      type: string
+      example: CPCL Nelayan Tahun 2025
+    year:
+      type: integer
+      example: 2025
+    cpcl_month:
+      type: integer
+      example: 3
+    status:
+      type: string
+      example: draft
+    version:
+      type: integer
+      example: 1
+    created_at:
+      type: string
+      format: date-time
+
+CpclDocumentPagination:
+  type: object
+  properties:
+    current_page:
+      type: integer
+      example: 1
+    data:
+      type: array
+      items:
+        $ref: './schemas.yaml#/CpclDocumentListItem'
+    first_page_url:
+      type: string
+    from:
+      type: integer
+      nullable: true
+    last_page:
+      type: integer
+    last_page_url:
+      type: string
+    links:
+      type: array
+      items:
+        $ref: './schemas.yaml#/PaginationLink'
+    next_page_url:
+      type: string
+      nullable: true
+    path:
+      type: string
+    per_page:
+      type: integer
+      example: 10
+    prev_page_url:
+      type: string
+      nullable: true
+    to:
+      type: integer
+      nullable: true
+    total:
+      type: integer
+
+CpclDocumentDetail:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    cpcl_number:
+      type: string
+      nullable: true
+      example: CPCL-2025-001
+    title:
+      type: string
+      example: CPCL Nelayan Tahun 2025
+    program_code:
+      type: string
+      nullable: true
+      example: PRG-01
+    year:
+      type: integer
+      example: 2025
+    cpcl_date:
+      type: string
+      format: date
+      example: "2025-03-12"
+    cpcl_month:
+      type: integer
+      example: 3
+    status:
+      type: string
+      example: draft
+    pleno_result:
+      type: string
+      example: pending
+    version:
+      type: integer
+      example: 1
+    prepared_by:
+      type: integer
+      nullable: true
+      example: 5
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CpclDocumentCreateRequest:
+  type: object
+  required:
+    - title
+    - year
+    - cpcl_date
+    - cpcl_month
+  properties:
+    title:
+      type: string
+      maxLength: 255
+      example: CPCL Nelayan Tahun 2025
+    program_code:
+      type: string
+      maxLength: 50
+      nullable: true
+      example: PRG-01
+    year:
+      type: integer
+      minimum: 2000
+      maximum: 2100
+      example: 2025
+    cpcl_date:
+      type: string
+      format: date
+      example: "2025-03-12"
+    cpcl_month:
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 3
+    prepared_by:
+      type: integer
+      nullable: true
+      example: 5
+
+CpclDocumentCreateResult:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 123
+
+CpclDocumentUpdateRequest:
+  type: object
+  properties:
+    title:
+      type: string
+      maxLength: 255
+      example: CPCL Nelayan Tahun 2025 (Revisi)
+    program_code:
+      type: string
+      maxLength: 50
+      nullable: true
+      example: PRG-01
+    status:
+      type: string
+      enum: [draft, submitted, review, pleno, approved, rejected, archived]
+      example: submitted
+    pleno_result:
+      type: string
+      enum: [pending, approved, revision, rejected]
+      example: pending
+    pleno_notes:
+      type: string
+      maxLength: 5000
+      nullable: true
+      example: Perlu perbaikan data lapangan
+
+CpclDocumentStatusUpdateRequest:
+  type: object
+  required:
+    - status
+  properties:
+    status:
+      type: string
+      enum: [draft, submitted, review, pleno, approved, rejected, archived]
+      example: submitted
+    pleno_date:
+      type: string
+      format: date
+      nullable: true
+      example: "2025-03-20"
+    pleno_notes:
+      type: string
+      maxLength: 5000
+      nullable: true
+      example: Data perlu revisi

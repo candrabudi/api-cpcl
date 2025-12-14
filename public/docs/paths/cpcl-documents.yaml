@@ -1,0 +1,180 @@
+list:
+  get:
+    tags: [CPCL Document]
+    summary: List CPCL documents
+    description: Retrieve paginated list of CPCL documents.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          example: 10
+      - in: query
+        name: page
+        schema:
+          type: integer
+          example: 1
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclDocumentListSuccess'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+detail:
+  get:
+    tags: [CPCL Document]
+    summary: Get CPCL document detail
+    description: Retrieve CPCL document detail by ID.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: CPCL document ID
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclDocumentDetailSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+store:
+  post:
+    tags: [CPCL Document]
+    summary: Create CPCL document
+    description: Create a new CPCL document in draft status.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclDocumentCreateRequest'
+    responses:
+      '201':
+        $ref: '../components/responses.yaml#/CpclDocumentCreateSuccess'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+update:
+  put:
+    tags: [CPCL Document]
+    summary: Update CPCL document
+    description: Update CPCL document metadata. Version increases when status changes.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: CPCL document ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclDocumentUpdateRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+updateStatus:
+  put:
+    tags: [CPCL Document]
+    summary: Update CPCL document status
+    description: |
+      Update CPCL document workflow status.
+      Allowed transitions:
+      - draft → submitted
+      - submitted → review
+      - review → pleno
+      - pleno → approved / rejected
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: CPCL document ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclDocumentStatusUpdateRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '409':
+        $ref: '../components/responses.yaml#/Conflict'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+delete:
+  delete:
+    tags: [CPCL Document]
+    summary: Delete CPCL document
+    description: Permanently delete CPCL document.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: CPCL document ID
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'

@@ -9,20 +9,32 @@ servers:
   - url: http://localhost:8000/api
 
 paths:
-  /auth/login:
+  /api/auth/login:
     $ref: './paths/auth.yaml#/login'
-  /auth/logout:
+  /api/auth/logout:
     $ref: './paths/auth.yaml#/logout'
-  /group-fields:
+  /api/group-fields:
     $ref: './paths/group-fields.yaml#/list'
-  /group-fields/store:
+  /api/group-fields/store:
     $ref: './paths/group-fields.yaml#/store'
-  /group-fields/{id}/show:
+  /api/group-fields/{id}/show:
     $ref: './paths/group-fields.yaml#/detail'
-  /group-fields/{id}/update:
+  /api/group-fields/{id}/update:
     $ref: './paths/group-fields.yaml#/update'
-  /group-fields/{id}/delete:
+  /api/group-fields/{id}/delete:
     $ref: './paths/group-fields.yaml#/delete'
+  /api/cpcl-documents:
+    $ref: './paths/cpcl-documents.yaml#/list'
+  /api/cpcl-documents/store:
+    $ref: './paths/cpcl-documents.yaml#/store'
+  /api/cpcl-documents/{id}/show:
+    $ref: './paths/cpcl-documents.yaml#/detail'
+  /api/cpcl-documents/{id}/update:
+    $ref: './paths/cpcl-documents.yaml#/update'
+  /api/cpcl-documents/{id}/status:
+    $ref: './paths/cpcl-documents.yaml#/updateStatus'
+  /api/cpcl-documents/{id}/delete:
+    $ref: './paths/cpcl-documents.yaml#/delete'
 
 components:
   schemas:

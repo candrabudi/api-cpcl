@@ -74,3 +74,47 @@ GroupFieldCreateSuccess:
             properties:
               data:
                 $ref: './schemas.yaml#/GroupFieldCreateResult'
+
+
+CpclDocumentListSuccess:
+  description: CPCL document list
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/CpclDocumentPagination'
+
+CpclDocumentDetailSuccess:
+  description: CPCL document detail
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/CpclDocumentDetail'
+
+CpclDocumentCreateSuccess:
+  description: CPCL document created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/CpclDocumentCreateResult'
+
+Conflict:
+  description: Conflict / Locked state
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorResponse'

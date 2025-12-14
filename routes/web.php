@@ -13,18 +13,6 @@ $router->get('/', function () {
     ]);
 });
 
-$router->get('/docs', function () {
-    return response()->file(base_path('public/swagger/index.html'));
-});
-
-$router->get('/docs/json', function () {
-    if (env('APP_ENV') === 'production') {
-        abort(404);
-    }
-
-    return app('App\Http\Controllers\Docs\ApiDocsController')->json();
-});
-
 $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('login', 'AuthController@login');
 
@@ -47,10 +35,10 @@ $router->group(['prefix' => 'api'], function () use ($router) {
 
         $router->group(['prefix' => 'cpcl-documents'], function () use ($router) {
             $router->get('/', 'CpclDocumentController@index');
-            $router->get('{id}', 'CpclDocumentController@show');
-            $router->post('/', 'CpclDocumentController@store');
-            $router->put('{id}', 'CpclDocumentController@update');
-            $router->delete('{id}', 'CpclDocumentController@destroy');
+            $router->get('{id}/show', 'CpclDocumentController@show');
+            $router->post('/store', 'CpclDocumentController@store');
+            $router->put('{id}/update', 'CpclDocumentController@update');
+            $router->delete('{id}/delete', 'CpclDocumentController@destroy');
             $router->put('{id}/status', 'CpclDocumentController@updateStatus');
         });
 

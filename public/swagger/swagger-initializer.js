@@ -22,28 +22,29 @@ window.onload = function () {
 
     // 🔥 AUTO SAVE TOKEN SETELAH LOGIN
     responseInterceptor: (res) => {
-      try {
-        const url = res?.url || '';
-        const body = res?.body;
+  try {
+    const url = res?.url || '';
 
-        // DETEKSI LOGIN ENDPOINT
-        if (
-          url.includes('/auth/login') &&
-          body &&
-          body.data &&
-          body.data.access_token
-        ) {
-          localStorage.setItem(
-            'swagger_jwt_token',
-            body.data.access_token
-          );
-          console.log('JWT token saved to localStorage');
-        }
-      } catch (e) {
-        console.warn('Failed to parse login response', e);
+    if (url.includes('/auth/login') && res?.body) {
+      const data =
+        typeof res.body === 'string'
+          ? JSON.parse(res.body)
+          : res.body;
+
+      if (data?.data?.access_token) {
+        localStorage.setItem(
+          'swagger_jwt_token',
+          data.data.access_token
+        );
+        console.log('JWT token saved to localStorage');
       }
-
-      return res;
     }
+  } catch (e) {
+    console.error('Failed to save token', e);
+  }
+
+  return res;
+}
+
   });
 };

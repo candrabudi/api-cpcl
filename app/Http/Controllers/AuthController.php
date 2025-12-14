@@ -66,21 +66,4 @@ class AuthController extends Controller
 
         return ApiResponse::success('Logout successful');
     }
-
-    public function me()
-    {
-        try {
-            $user = JWTAuth::parseToken()->authenticate();
-        } catch (\Throwable $e) {
-            return ApiResponse::error('Unauthenticated', 401);
-        }
-
-        return ApiResponse::success('User profile', [
-            'id' => $user->id,
-            'username' => $user->username,
-            'email' => $user->email,
-            'role' => $user->role,
-            'status' => $user->status,
-        ]);
-    }
 }

@@ -1,0 +1,33 @@
+openapi: 3.0.3
+
+info:
+  title: CPCL API
+  version: 1.0.0
+  description: CPCL Service API Documentation
+
+servers:
+  - url: http://localhost:8000/api
+
+paths:
+  /auth/login:
+    $ref: './paths/auth.yaml#/login'
+  /auth/logout:
+    $ref: './paths/auth.yaml#/logout'
+  /group-fields:
+    $ref: './paths/group-fields.yaml#/list'
+  /group-fields/store:
+    $ref: './paths/group-fields.yaml#/store'
+  /group-fields/{id}/show:
+    $ref: './paths/group-fields.yaml#/detail'
+  /group-fields/{id}/update:
+    $ref: './paths/group-fields.yaml#/update'
+  /group-fields/{id}/delete:
+    $ref: './paths/group-fields.yaml#/delete'
+
+components:
+  schemas:
+    $ref: './components/schemas.yaml'
+  responses:
+    $ref: './components/responses.yaml'
+  securitySchemes:
+    $ref: './components/security.yaml'

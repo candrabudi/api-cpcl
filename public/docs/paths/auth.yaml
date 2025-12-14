@@ -1,0 +1,41 @@
+login:
+  post:
+    tags:
+      - Auth
+    summary: Login using email or username
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - login
+              - password
+            properties:
+              login:
+                type: string
+                example: johndoe
+              password:
+                type: string
+                example: secret123
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/AuthLoginSuccess'
+      '401':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+
+logout:
+  post:
+    tags:
+      - Auth
+    summary: Logout current user
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '401':
+        $ref: '../components/responses.yaml#/Error'

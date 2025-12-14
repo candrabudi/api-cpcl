@@ -12,6 +12,19 @@ $router->get('/', function () {
         'timestamp' => Carbon::now()->toIso8601String(),
     ]);
 });
+
+$router->get('/docs', function () {
+    return response()->file(base_path('public/swagger/index.html'));
+});
+
+$router->get('/docs/json', function () {
+    if (env('APP_ENV') === 'production') {
+        abort(404);
+    }
+
+    return app('App\Http\Controllers\Docs\ApiDocsController')->json();
+});
+
 $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('login', 'AuthController@login');
 
@@ -26,10 +39,10 @@ $router->group(['prefix' => 'api'], function () use ($router) {
 
         $router->group(['prefix' => 'group-fields'], function () use ($router) {
             $router->get('/', 'GroupFieldController@index');
-            $router->get('{id}', 'GroupFieldController@show');
+            $router->get('{id}/show', 'GroupFieldController@show');
             $router->post('/', 'GroupFieldController@store');
-            $router->put('{id}', 'GroupFieldController@update');
-            $router->delete('{id}', 'GroupFieldController@destroy');
+            $router->put('{id}/update', 'GroupFieldController@update');
+            $router->delete('{id}/delete', 'GroupFieldController@destroy');
         });
 
         $router->group(['prefix' => 'cpcl-documents'], function () use ($router) {

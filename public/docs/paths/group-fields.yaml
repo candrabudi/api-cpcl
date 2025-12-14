@@ -1,0 +1,139 @@
+list:
+  get:
+    tags: [GroupField]
+    summary: List group field documents
+    description: Retrieve paginated list of group field documents.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 10
+        description: Number of items per page
+
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/GroupFieldListSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+detail:
+  get:
+    tags: [GroupField]
+    summary: Get group field document detail
+    description: Retrieve document detail including hierarchical rows.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: Document ID
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/GroupFieldDetailSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+store:
+  post:
+    tags: [GroupField]
+    summary: Create group field document
+    description: Create group field document with full hierarchical rows.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/GroupFieldCreateRequest'
+    responses:
+      '201':
+        $ref: '../components/responses.yaml#/GroupFieldCreateSuccess'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+update:
+  put:
+    tags: [GroupField]
+    summary: Update group field document values
+    description: Update values of group field rows only.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: Document ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/GroupFieldUpdateRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+delete:
+  delete:
+    tags: [GroupField]
+    summary: Delete group field document
+    description: Delete group field document and all related rows.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          example: 1
+        description: Document ID
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '401':
+        $ref: '../components/responses.yaml#/Unauthenticated'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'

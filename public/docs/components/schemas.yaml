@@ -99,7 +99,6 @@ UnauthenticatedError:
     meta:
       $ref: '#/Meta'
 
-
 # ===== AUTH-SPECIFIC DATA (HANYA DATA, BUKAN WRAPPER) =====
 
 AuthUser:

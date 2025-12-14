@@ -32,8 +32,6 @@ logout:
     tags:
       - Auth
     summary: Logout current user
-    security:
-      - bearerAuth: []
     responses:
       '200':
         $ref: '../components/responses.yaml#/Success'

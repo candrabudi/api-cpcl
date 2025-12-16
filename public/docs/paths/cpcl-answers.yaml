@@ -1,0 +1,48 @@
+store:
+  post:
+    tags: [CPCL Answer]
+    summary: Save CPCL answers
+    description: |
+      Save or update CPCL answers.
+      CPCL applicant must exist before submitting answers.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclAnswerStoreRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclAnswerStoreSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+detail:
+  get:
+    tags: [CPCL Answer]
+    summary: Get CPCL answers with schema
+    description: |
+      Retrieve CPCL group field schema merged with applicant answers.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: cpcl_document_id
+        required: true
+        schema:
+          type: integer
+          example: 5
+        description: CPCL document ID
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclAnswerTreeSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'

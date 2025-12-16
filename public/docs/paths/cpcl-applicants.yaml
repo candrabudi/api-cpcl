@@ -1,0 +1,115 @@
+list:
+  get:
+    tags: [CPCL Applicant]
+    summary: List CPCL applicants
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: cpcl_document_id
+        schema:
+          type: integer
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclApplicantListSuccess'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+detail:
+  get:
+    tags: [CPCL Applicant]
+    summary: Get CPCL applicant detail
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: cpcl_document_id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclApplicantDetailSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+
+
+store:
+  post:
+    tags: [CPCL Applicant]
+    summary: Create CPCL applicant
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclApplicantCreateRequest'
+    responses:
+      '201':
+        $ref: '../components/responses.yaml#/CpclApplicantCreateSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+update:
+  put:
+    tags: [CPCL Applicant]
+    summary: Update CPCL applicant
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclApplicantCreateRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+
+delete:
+  delete:
+    tags: [CPCL Applicant]
+    summary: Delete CPCL applicant
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/Success'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '500':
+        $ref: '../components/responses.yaml#/Error'

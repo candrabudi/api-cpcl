@@ -37,6 +37,22 @@ paths:
   /api/cpcl-documents/{id}/delete:
     $ref: './paths/cpcl-documents.yaml#/delete'
 
+  /cpcl-applicants:
+      $ref: './paths/cpcl-applicants.yaml#/list'
+  /cpcl-applicants/store:
+      $ref: './paths/cpcl-applicants.yaml#/store'
+
+  /cpcl-applicants/{id}/show:
+      $ref: './paths/cpcl-applicants.yaml#/detail'
+  /cpcl-applicants/{id}/update:
+      $ref: './paths/cpcl-applicants.yaml#/update'
+  /cpcl-applicants/{id}/delete:
+      $ref: './paths/cpcl-applicants.yaml#/delete'
+  /cpcl-answers:
+      $ref: './paths/cpcl-answers.yaml#/store'
+  /cpcl-answers/{cpcl_document_id}:
+      $ref: './paths/cpcl-answers.yaml#/detail'
+
 components:
   schemas:
     $ref: './components/schemas.yaml'

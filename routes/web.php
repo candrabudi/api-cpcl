@@ -55,10 +55,10 @@ $router->group(['prefix' => 'api'], function () use ($router) {
 
         $router->group(['prefix' => 'cpcl-applicants'], function () use ($router) {
             $router->get('/', 'CpclApplicantController@index');
-            $router->get('{id}', 'CpclApplicantController@show');
-            $router->post('/', 'CpclApplicantController@store');
-            $router->put('{id}', 'CpclApplicantController@update');
-            $router->delete('{id}', 'CpclApplicantController@destroy');
+            $router->get('{id}/show', 'CpclApplicantController@show');
+            $router->post('/store', 'CpclApplicantController@store');
+            $router->put('{id}/update', 'CpclApplicantController@update');
+            $router->delete('{id}/delete', 'CpclApplicantController@destroy');
         });
 
         $router->group(['prefix' => 'cpcl-answers'], function () use ($router) {

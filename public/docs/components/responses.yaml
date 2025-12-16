@@ -118,3 +118,63 @@ Conflict:
     application/json:
       schema:
         $ref: './schemas.yaml#/ErrorResponse'
+
+CpclApplicantListSuccess:
+  description: CPCL applicants retrieved
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/Paginated'
+
+CpclApplicantDetailSuccess:
+  description: CPCL applicant detail
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/CpclApplicant'
+
+CpclApplicantCreateSuccess:
+  description: CPCL applicant created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  id:
+                    type: integer
+
+CpclAnswerStoreSuccess:
+  description: CPCL answers saved
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/SuccessResponse'
+
+CpclAnswerTreeSuccess:
+  description: CPCL schema with answers
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: './schemas.yaml#/CpclAnswerTreeNode'

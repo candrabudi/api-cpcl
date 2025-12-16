@@ -1,0 +1,88 @@
+list:
+  get:
+    tags: [CPCL Fishing Vessel]
+    summary: Get fishing vessels by CPCL document
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: cpcl_document_id
+        required: true
+        schema:
+          type: integer
+          example: 10
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclFishingVesselListSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+
+store:
+  post:
+    tags: [CPCL Fishing Vessel]
+    summary: Save fishing vessels
+    description: |
+      Save fishing vessels for CPCL document.
+      This will replace all existing data.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: cpcl_document_id
+        required: true
+        schema:
+          type: integer
+          example: 10
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclFishingVesselStoreRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclFishingVesselStoreSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '409':
+        $ref: '../components/responses.yaml#/Conflict'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'
+
+update:
+  put:
+    tags: [CPCL Fishing Vessel]
+    summary: Update fishing vessels
+    description: Same as create (replace all records).
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: cpcl_document_id
+        required: true
+        schema:
+          type: integer
+          example: 10
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CpclFishingVesselStoreRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/CpclFishingVesselStoreSuccess'
+      '400':
+        $ref: '../components/responses.yaml#/Error'
+      '404':
+        $ref: '../components/responses.yaml#/Error'
+      '409':
+        $ref: '../components/responses.yaml#/Conflict'
+      '422':
+        $ref: '../components/responses.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses.yaml#/Error'

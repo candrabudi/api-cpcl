@@ -65,5 +65,11 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->post('/', 'CpclAnswerController@store');
             $router->get('{cpcl_document_id}', 'CpclAnswerController@show');
         });
+
+        $router->group(['prefix' => 'cpcl-documents/{cpcl_document_id}/fishing-vessels'], function () use ($router) {
+            $router->get('/', 'CpclFishingVesselController@show');
+            $router->post('/', 'CpclFishingVesselController@store');
+            $router->put('/', 'CpclFishingVesselController@update');
+        });
     });
 });

@@ -727,3 +727,71 @@ CpclAnswerTreeNode:
           - $ref: './schemas.yaml#/CpclAnswerTreeNode'
 
 
+CpclFishingVessel:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    cpcl_document_id:
+      type: integer
+      example: 10
+    ship_type:
+      type: string
+      nullable: true
+      example: Kapal Motor
+    engine_brand:
+      type: string
+      nullable: true
+      example: Yanmar
+    engine_power:
+      type: string
+      nullable: true
+      example: 30 HP
+    quantity:
+      type: integer
+      example: 5
+
+CpclFishingVesselListResponse:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: './schemas.yaml#/CpclFishingVessel'
+    total_quantity:
+      type: integer
+      example: 15
+
+CpclFishingVesselItem:
+  type: object
+  required:
+    - quantity
+  properties:
+    ship_type:
+      type: string
+      nullable: true
+      example: Kapal Motor
+    engine_brand:
+      type: string
+      nullable: true
+      example: Yanmar
+    engine_power:
+      type: string
+      nullable: true
+      example: 30 HP
+    quantity:
+      type: integer
+      minimum: 1
+      example: 5
+
+CpclFishingVesselStoreRequest:
+  type: object
+  required:
+    - fishing_vessels
+  properties:
+    fishing_vessels:
+      type: array
+      minItems: 1
+      items:
+        $ref: './schemas.yaml#/CpclFishingVesselItem'

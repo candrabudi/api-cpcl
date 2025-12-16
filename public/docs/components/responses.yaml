@@ -178,3 +178,22 @@ CpclAnswerTreeSuccess:
                 type: array
                 items:
                   $ref: './schemas.yaml#/CpclAnswerTreeNode'
+
+CpclFishingVesselListSuccess:
+  description: Fishing vessels retrieved
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: './schemas.yaml#/SuccessResponse'
+          - type: object
+            properties:
+              data:
+                $ref: './schemas.yaml#/CpclFishingVesselListResponse'
+
+CpclFishingVesselStoreSuccess:
+  description: Fishing vessels saved
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/SuccessResponse'

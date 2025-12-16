@@ -25,4 +25,9 @@ class CpclDocument extends Model
         'verified_at',
         'approved_at',
     ];
+
+    public function fishingVessels()
+    {
+        return $this->hasMany(CpclFishingVessel::class);
+    }
 }

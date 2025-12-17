@@ -37,26 +37,26 @@ paths:
   /api/cpcl-documents/{id}/delete:
     $ref: './paths/cpcl-documents.yaml#/delete'
 
-  /cpcl-applicants:
+  /api/cpcl-applicants:
       $ref: './paths/cpcl-applicants.yaml#/list'
-  /cpcl-applicants/store:
+  /api/cpcl-applicants/store:
       $ref: './paths/cpcl-applicants.yaml#/store'
 
-  /cpcl-applicants/{id}/show:
+  /api/cpcl-applicants/{id}/show:
       $ref: './paths/cpcl-applicants.yaml#/detail'
-  /cpcl-applicants/{id}/update:
+  /api/cpcl-applicants/{id}/update:
       $ref: './paths/cpcl-applicants.yaml#/update'
-  /cpcl-applicants/{id}/delete:
+  /api/cpcl-applicants/{id}/delete:
       $ref: './paths/cpcl-applicants.yaml#/delete'
-  /cpcl-answers:
+  /api/cpcl-answers:
       $ref: './paths/cpcl-answers.yaml#/store'
-  /cpcl-answers/{cpcl_document_id}:
+  /api/cpcl-answers/{cpcl_document_id}:
       $ref: './paths/cpcl-answers.yaml#/detail'
-  /cpcl-documents/{cpcl_document_id}/fishing-vessels:
+  /api/cpcl-documents/{cpcl_document_id}/fishing-vessels:
       $ref: './paths/cpcl-fishing-vessels.yaml#/list'
-  /cpcl-documents/{cpcl_document_id}/fishing-vessels/store:
+  /api/cpcl-documents/{cpcl_document_id}/fishing-vessels/store:
       $ref: './paths/cpcl-fishing-vessels.yaml#/store'
-  /cpcl-documents/{cpcl_document_id}/fishing-vessels/update:
+  /api/cpcl-documents/{cpcl_document_id}/fishing-vessels/update:
       $ref: './paths/cpcl-fishing-vessels.yaml#/update'
 
 components:

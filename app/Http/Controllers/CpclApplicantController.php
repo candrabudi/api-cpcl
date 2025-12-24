@@ -48,7 +48,8 @@ class CpclApplicantController extends Controller
         }
 
         $applicant = CpclApplicant::with(['cooperative', 'area'])
-            ->find($id);
+            ->where('cpcl_document_id', $id)
+            ->first();
 
         if (!$applicant) {
             return ApiResponse::error('Applicant not found', 404);

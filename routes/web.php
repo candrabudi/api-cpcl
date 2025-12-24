@@ -1,6 +1,7 @@
 <?php
 
 /** @var Laravel\Lumen\Routing\Router $router */
+
 use Carbon\Carbon;
 
 $router->get('/', function () {
@@ -70,6 +71,10 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->get('/', 'CpclFishingVesselController@show');
             $router->post('/', 'CpclFishingVesselController@store');
             $router->put('/', 'CpclFishingVesselController@update');
+        });
+
+        $router->group(['prefix' => '/areas'], function () use ($router) {
+            $router->get('/search', 'AreaSearchController@search');
         });
     });
 });

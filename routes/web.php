@@ -27,6 +27,9 @@ $router->get('/docs/openapi.yaml', function () {
 
 $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('/auth/login', 'AuthController@login');
+    $router->post('/auth/verify-otp', 'AuthController@verifyOtp');
+    $router->post('/auth/refresh', 'AuthController@refresh');
+    $router->post('/auth/logout', 'AuthController@logout');
 
     $router->group(['middleware' => 'auth'], function () use ($router) {
         $router->post('/auth/logout', 'AuthController@logout');
@@ -60,6 +63,14 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->post('/store', 'CpclApplicantController@store');
             $router->put('{id}/update', 'CpclApplicantController@update');
             $router->delete('{id}/delete', 'CpclApplicantController@destroy');
+        });
+
+        $router->group(['prefix' => 'cooperatives'], function () use ($router) {
+            $router->get('/', 'CooperativeController@index');
+            $router->get('{id}/show', 'CooperativeController@show');
+            $router->post('/store', 'CooperativeController@store');
+            $router->put('{id}/update', 'CooperativeController@update');
+            $router->delete('{id}/delete', 'CooperativeController@destroy');
         });
 
         $router->group(['prefix' => 'cpcl-answers'], function () use ($router) {

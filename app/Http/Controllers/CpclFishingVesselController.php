@@ -58,7 +58,7 @@ class CpclFishingVesselController extends Controller
             if (!$document) {
                 DB::rollBack();
 
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             if (in_array($document->status, ['approved', 'archived'])) {

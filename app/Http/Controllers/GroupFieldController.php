@@ -51,7 +51,7 @@ class GroupFieldController extends Controller
                 ->first();
 
             if (!$document) {
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
         } catch (\Throwable $e) {
             return ApiResponse::error('Failed to retrieve document '.$e->getMessage(), 500);
@@ -142,7 +142,7 @@ class GroupFieldController extends Controller
             if (!$document) {
                 DB::rollBack();
 
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             foreach ($request->rows as $row) {
@@ -175,7 +175,7 @@ class GroupFieldController extends Controller
         try {
             $document = GroupField::where('id', $id)->first();
             if (!$document) {
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             $document->delete();

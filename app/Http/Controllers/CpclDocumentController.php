@@ -54,7 +54,7 @@ class CpclDocumentController extends Controller
         });
 
         if (!$document) {
-            return ApiResponse::error('Document not found', 404);
+            return ApiResponse::error('Document not found', 400);
         }
 
         return ApiResponse::success('CPCL document detail', $document);
@@ -131,7 +131,7 @@ class CpclDocumentController extends Controller
             if (!$document) {
                 DB::rollBack();
 
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             $payload = [];
@@ -171,7 +171,7 @@ class CpclDocumentController extends Controller
             $document = CpclDocument::where('id', $id)->first();
 
             if (!$document) {
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             $document->delete();
@@ -211,7 +211,7 @@ class CpclDocumentController extends Controller
             if (!$document) {
                 DB::rollBack();
 
-                return ApiResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 400);
             }
 
             if (in_array($document->status, ['approved', 'archived'])) {

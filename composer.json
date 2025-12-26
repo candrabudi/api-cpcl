@@ -13,7 +13,9 @@
         "illuminate/database": "^10.49",
         "illuminate/redis": "^10.49",
         "laravel/lumen-framework": "^10.0",
+        "phpmailer/phpmailer": "^7.0",
         "predis/predis": "^3.3",
+        "swiftmailer/swiftmailer": "^6.3",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {

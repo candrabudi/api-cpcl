@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->year('established_year')->nullable();
 
             $table->string('street_address')->nullable();
+            $table->bigInteger('area_id')->nullable();
             $table->string('village')->nullable();
             $table->string('district')->nullable();
             $table->string('regency')->nullable();

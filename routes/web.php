@@ -14,22 +14,10 @@ $router->get('/', function () {
     ]);
 });
 
-$router->get('/docs/openapi.yaml', function () {
-    return response()->file(
-        base_path('public/docs/openapi.yaml'),
-        [
-            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
-        ]
-    );
-});
-
 $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('/auth/login', 'AuthController@login');
     $router->post('/auth/verify-otp', 'AuthController@verifyOtp');
     $router->post('/auth/refresh', 'AuthController@refresh');
-    $router->post('/auth/logout', 'AuthController@logout');
 
     $router->group(['middleware' => 'auth'], function () use ($router) {
         $router->post('/auth/logout', 'AuthController@logout');

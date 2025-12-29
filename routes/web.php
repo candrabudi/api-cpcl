@@ -84,5 +84,13 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->put('{id}/update', 'PlenaryMeetingController@update');
             $router->delete('{id}/delete', 'PlenaryMeetingController@destroy');
         });
+
+        $router->group(['prefix' => 'annual-budgets'], function () use ($router) {
+            $router->get('/', 'AnnualBudgetController@index');
+            $router->get('/{id}/show', 'AnnualBudgetController@show');
+            $router->post('', 'AnnualBudgetController@store');
+            $router->put('/{id}/update', 'AnnualBudgetController@update');
+            $router->delete('/{id}/delete', 'AnnualBudgetController@destroy');
+        });
     });
 });

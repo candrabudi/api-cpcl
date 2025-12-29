@@ -25,6 +25,8 @@ return new class extends Migration {
             $table->string('phone_number')->nullable();
             $table->string('email')->nullable();
 
+            $table->bigInteger('member_count')->default(0);
+
             $table->string('chairman_name')->nullable();
             $table->string('secretary_name')->nullable();
             $table->string('treasurer_name')->nullable();

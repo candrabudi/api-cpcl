@@ -55,7 +55,7 @@ class PlenaryMeetingController extends Controller
         ])->find($id);
 
         if (!$meeting) {
-            return ApiResponse::error('Plenary meeting not found', 404);
+            return ApiResponse::error('Plenary meeting not found', 400);
         }
 
         return ApiResponse::success('Plenary meeting detail', $meeting);
@@ -177,7 +177,7 @@ class PlenaryMeetingController extends Controller
             if (!$meeting) {
                 DB::rollBack();
 
-                return ApiResponse::error('Plenary meeting not found', 404);
+                return ApiResponse::error('Plenary meeting not found', 400);
             }
 
             $meeting->update($request->only([
@@ -240,7 +240,7 @@ class PlenaryMeetingController extends Controller
             if (!$meeting) {
                 DB::rollBack();
 
-                return ApiResponse::error('Plenary meeting not found', 404);
+                return ApiResponse::error('Plenary meeting not found', 400);
             }
 
             $meeting->delete();

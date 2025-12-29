@@ -119,6 +119,7 @@ class CooperativeController extends Controller
                 'secretary_name' => $request->secretary_name,
                 'treasurer_name' => $request->treasurer_name,
                 'chairman_phone_number' => $request->chairman_phone_number,
+                'member_count' => $request->member_count,
             ]);
 
             DB::commit();
@@ -203,6 +204,7 @@ class CooperativeController extends Controller
                 'secretary_name' => $request->secretary_name,
                 'treasurer_name' => $request->treasurer_name,
                 'chairman_phone_number' => $request->chairman_phone_number,
+                'member_count' => $request->member_count,
             ]);
 
             DB::commit();

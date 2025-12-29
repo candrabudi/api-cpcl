@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Helpers\GmailMailer;
+use App\Helpers\GmailMailer as HelpersGmailMailer;
 use App\Models\EmailLoginOtp;
 use App\Models\User;
 use Carbon\Carbon;
@@ -54,19 +54,52 @@ class AuthController extends Controller
                 'expired_at' => Carbon::now()->addMinutes(5),
             ]);
 
-            GmailMailer::send(
-                $user->email,
-                'OTP Login',
-                "Kode OTP Login kamu: {$otp}\nBerlaku 5 menit."
-            );
+            // 🔥 REGISTER BACKGROUND EVENT
+            register_shutdown_function(function () use ($user, $otp) {
+                try {
+                    HelpersGmailMailer::send(
+                        $user->email,
+                        'OTP Login',
+                        "Kode OTP Login kamu: {$otp}\nBerlaku 5 menit."
+                    );
+                } catch (\Throwable $e) {
+                    \Log::error('OTP email failed', [
+                        'email' => $user->email,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
+
+            // ✅ BUILD RESPONSE
+            $response = ApiResponse::success('OTP sent to email', [
+                'email' => $user->email,
+                'otp_required' => true,
+            ]);
+
+            // 🚀 FORCE SEND RESPONSE SEKARANG
+            header('Connection: close');
+            header('Content-Encoding: none');
+
+            $content = $response->getContent();
+            header('Content-Length: '.strlen($content));
+
+            echo $content;
+
+            // 🔥 FLUSH SEMUA BUFFER
+            if (ob_get_level()) {
+                ob_end_flush();
+            }
+            flush();
+
+            // ⛔ PUTUS KONEKSI CLIENT (PHP-FPM)
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            }
+
+            return;
         } catch (\Throwable $e) {
             return ApiResponse::error('Login failed '.$e->getMessage(), 400);
         }
-
-        return ApiResponse::success('OTP sent to email', [
-            'email' => $user->email,
-            'otp_required' => true,
-        ]);
     }
 
     public function verifyOtp(Request $request)

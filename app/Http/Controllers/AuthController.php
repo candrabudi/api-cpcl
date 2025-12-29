@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Helpers\GmailMailer as HelpersGmailMailer;
+use App\Jobs\SendLoginOtpJob;
 use App\Models\EmailLoginOtp;
+use App\Models\LoginLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ class AuthController extends Controller
         try {
             $login = (string) $request->login;
             $password = (string) $request->password;
+            $ip = $request->ip();
 
             $user = User::where('status', 1)
                 ->where(function ($q) use ($login) {
@@ -42,6 +44,22 @@ class AuthController extends Controller
                 return ApiResponse::error('Invalid credentials', 401);
             }
 
+            $validLogin = LoginLog::where('user_id', $user->id)
+                ->where('ip_address', $ip)
+                ->whereNotNull('otp_verified_at')
+                ->where('otp_verified_at', '>=', Carbon::now()->subDays(3))
+                ->latest()
+                ->first();
+
+            if ($validLogin) {
+                $token = JWTAuth::fromUser($user);
+
+                return ApiResponse::success('Login success', [
+                    'token' => $token,
+                    'otp_required' => false,
+                ]);
+            }
+
             $otp = random_int(100000, 999999);
 
             EmailLoginOtp::where('email', $user->email)
@@ -54,49 +72,12 @@ class AuthController extends Controller
                 'expired_at' => Carbon::now()->addMinutes(5),
             ]);
 
-            // 🔥 REGISTER BACKGROUND EVENT
-            register_shutdown_function(function () use ($user, $otp) {
-                try {
-                    HelpersGmailMailer::send(
-                        $user->email,
-                        'OTP Login',
-                        "Kode OTP Login kamu: {$otp}\nBerlaku 5 menit."
-                    );
-                } catch (\Throwable $e) {
-                    \Log::error('OTP email failed', [
-                        'email' => $user->email,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            });
+            dispatch(new SendLoginOtpJob($user->email, $otp));
 
-            // ✅ BUILD RESPONSE
-            $response = ApiResponse::success('OTP sent to email', [
+            return ApiResponse::success('OTP sent', [
                 'email' => $user->email,
                 'otp_required' => true,
             ]);
-
-            // 🚀 FORCE SEND RESPONSE SEKARANG
-            header('Connection: close');
-            header('Content-Encoding: none');
-
-            $content = $response->getContent();
-            header('Content-Length: '.strlen($content));
-
-            echo $content;
-
-            // 🔥 FLUSH SEMUA BUFFER
-            if (ob_get_level()) {
-                ob_end_flush();
-            }
-            flush();
-
-            // ⛔ PUTUS KONEKSI CLIENT (PHP-FPM)
-            if (function_exists('fastcgi_finish_request')) {
-                fastcgi_finish_request();
-            }
-
-            return;
         } catch (\Throwable $e) {
             return ApiResponse::error('Login failed '.$e->getMessage(), 400);
         }
@@ -132,12 +113,21 @@ class AuthController extends Controller
                 ->where('status', 1)
                 ->firstOrFail();
 
+            LoginLog::create([
+                'user_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'otp_verified_at' => Carbon::now(),
+            ]);
+
             $token = JWTAuth::fromUser($user);
+
+            return ApiResponse::success('Login success', [
+                'token' => $token,
+                'otp_required' => false,
+            ]);
         } catch (\Throwable $e) {
             return ApiResponse::error('OTP verification failed '.$e->getMessage(), 400);
         }
-
-        return $this->respondWithToken($token, $user);
     }
 
     public function refresh()

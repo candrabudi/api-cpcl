@@ -75,5 +75,14 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->group(['prefix' => '/areas'], function () use ($router) {
             $router->get('/search', 'AreaSearchController@search');
         });
+
+        $router->group(['prefix' => 'plenary-meetings'], function () use ($router) {
+            $router->get('/', 'PlenaryMeetingController@index');
+            $router->get('{id}/show', 'PlenaryMeetingController@show');
+
+            $router->post('/store', 'PlenaryMeetingController@store');
+            $router->put('{id}/update', 'PlenaryMeetingController@update');
+            $router->delete('{id}/delete', 'PlenaryMeetingController@destroy');
+        });
     });
 });

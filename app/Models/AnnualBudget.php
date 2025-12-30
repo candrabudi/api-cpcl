@@ -15,8 +15,22 @@ class AnnualBudget extends Model
         'remaining_budget',
     ];
 
-    public function allocations()
+    protected $appends = ['used_budget', 'remaining_budget'];
+
+    public function procurements()
     {
-        return $this->hasMany(AnnualBudgetAllocation::class);
+        return $this->hasMany(Procurement::class);
+    }
+
+    public function getUsedBudgetAttribute()
+    {
+        return $this->procurements()->with('items')->get()->sum(function ($p) {
+            return $p->items->sum('total_price');
+        });
+    }
+
+    public function getRemainingBudgetAttribute()
+    {
+        return $this->total_budget - $this->used_budget;
     }
 }

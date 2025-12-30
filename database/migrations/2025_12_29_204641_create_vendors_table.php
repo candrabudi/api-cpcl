@@ -12,18 +12,16 @@ return new class extends Migration {
     {
         Schema::create('vendors', function (Blueprint $table) {
             $table->id();
-
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
-
+            $table->foreignId('area_id');
             $table->string('name');
             $table->string('npwp')->nullable()->unique();
             $table->string('contact_person')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
-
             $table->timestamps();
         });
     }

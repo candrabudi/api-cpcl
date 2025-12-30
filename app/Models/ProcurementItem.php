@@ -13,23 +13,36 @@ class ProcurementItem extends Model
         'quantity',
         'unit_price',
         'total_price',
+        'total_paid',
         'delivery_status',
         'estimated_delivery_date',
         'actual_delivery_date',
+        'received_at',
     ];
+
+    protected $casts = [
+        'estimated_delivery_date' => 'date',
+        'actual_delivery_date' => 'date',
+        'received_at' => 'date',
+    ];
+
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
+    public function plenaryMeetingItem()
+    {
+        return $this->belongsTo(PlenaryMeetingItem::class);
+    }
 
     public function procurement()
     {
         return $this->belongsTo(Procurement::class);
     }
 
-    public function plenaryItem()
+    public function annualBudgetAllocation()
     {
-        return $this->belongsTo(PlenaryMeetingItem::class);
-    }
-
-    public function vendor()
-    {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(AnnualBudgetAllocation::class);
     }
 }

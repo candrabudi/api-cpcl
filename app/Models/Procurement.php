@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Procurement extends Model
 {
     protected $fillable = [
+        'annual_budget_id',
         'plenary_meeting_id',
-        'annual_budget_allocation_id',
         'procurement_number',
         'procurement_date',
         'status',
@@ -20,9 +20,9 @@ class Procurement extends Model
         return $this->belongsTo(PlenaryMeeting::class);
     }
 
-    public function allocation()
+    public function annualBudget()
     {
-        return $this->belongsTo(AnnualBudgetAllocation::class);
+        return $this->hasOne(AnnualBudget::class, 'id', 'annual_budget_id');
     }
 
     public function items()

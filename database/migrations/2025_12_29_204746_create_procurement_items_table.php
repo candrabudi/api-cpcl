@@ -29,22 +29,13 @@ return new class extends Migration {
             $table->decimal('unit_price', 18, 2);
             $table->decimal('total_price', 18, 2);
 
-            $table->enum('delivery_status', [
-                'pending',
-                'building',
-                'delivered',
-            ])->default('pending');
+            $table->string('delivery_status')->default('pending');
 
             $table->date('estimated_delivery_date')->nullable();
             $table->date('actual_delivery_date')->nullable();
+            $table->date('received_at')->nullable();
 
             $table->timestamps();
-
-            // $table->unique([
-            //     'procurement_id',
-            //     'plenary_meeting_item_id',
-            //     'vendor_id',
-            // ]);
         });
     }
 

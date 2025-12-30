@@ -13,6 +13,7 @@ class PlenaryMeetingItem extends Model
         'plenary_meeting_id',
         'cooperative_id',
         'vessel_type',
+        'cpcl_document_id',
         'engine_specification',
         'package_quantity',
     ];
@@ -25,5 +26,10 @@ class PlenaryMeetingItem extends Model
     public function cooperative()
     {
         return $this->belongsTo(Cooperative::class);
+    }
+
+    public function cpclDocument()
+    {
+        return $this->hasOne(CpclDocument::class, 'id', 'cpcl_document_id');
     }
 }

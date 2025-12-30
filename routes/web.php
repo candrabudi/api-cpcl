@@ -92,5 +92,20 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->put('/{id}/update', 'AnnualBudgetController@update');
             $router->delete('/{id}/delete', 'AnnualBudgetController@destroy');
         });
+        $router->group(['prefix' => 'vendors'], function () use ($router) {
+            $router->get('/', ['uses' => 'VendorController@index']);
+            $router->get('/{id}/show', ['uses' => 'VendorController@show']);
+            $router->post('/store', ['uses' => 'VendorController@store']);
+            $router->put('/{id}/update', ['uses' => 'VendorController@update']);
+            $router->delete('/{id}/delete', ['uses' => 'VendorController@destroy']);
+        });
+
+        $router->group(['prefix' => 'procurements'], function () use ($router) {
+            $router->get('/', ['uses' => 'ProcurementController@index']);
+            $router->get('/{id}/show', ['uses' => 'ProcurementController@show']);
+            $router->post('/store', ['uses' => 'ProcurementController@store']);
+            $router->put('/{id}/update', ['uses' => 'ProcurementController@update']);
+            $router->delete('/{id}/delete', ['uses' => 'ProcurementController@destroy']);
+        });
     });
 });

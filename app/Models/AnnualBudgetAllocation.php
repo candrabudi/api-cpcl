@@ -23,4 +23,9 @@ class AnnualBudgetAllocation extends Model
     {
         return $this->hasMany(Procurement::class);
     }
+
+    public function annualBudget()
+    {
+        return $this->belongsTo(AnnualBudget::class, 'annual_budget_id');
+    }
 }

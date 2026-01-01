@@ -15,7 +15,7 @@ class FullSeeder extends Seeder
         $faker = Faker::create();
 
         // ===============================
-        // Items (kapal & mesin)
+        // Items (kapal & mesin kapal)
         // ===============================
         $itemIds = [];
 
@@ -111,7 +111,7 @@ class FullSeeder extends Seeder
         // Plenary Meeting Items
         // ===============================
         $plenaryMeetingItemIds = [];
-        $cooperativeIds = [1, 2];
+        $cooperativeIds = [2, 3, 4];
         foreach ($meetingIds as $meetingId) {
             foreach ($itemIds as $itemId) {
                 $plenaryMeetingItemIds[] = DB::table('plenary_meeting_items')->insertGetId([
@@ -162,17 +162,18 @@ class FullSeeder extends Seeder
         // Procurements
         // ===============================
         $procurementIds = [];
-        $statuses = ['draft', 'approved', 'contracted', 'in_progress', 'completed', 'cancelled'];
         foreach ($meetingIds as $meetingId) {
-            $procurementIds[] = DB::table('procurements')->insertGetId([
-                'plenary_meeting_id' => $meetingId,
-                'procurement_number' => strtoupper(Str::random(8)),
-                'procurement_date' => Carbon::today(),
-                'status' => 'draft',
-                'notes' => 'Pengadaan kapal dan mesin kapal',
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
+            for ($i = 0; $i < 2; ++$i) {
+                $procurementIds[] = DB::table('procurements')->insertGetId([
+                    'plenary_meeting_id' => $meetingId,
+                    'procurement_number' => strtoupper(Str::random(8)),
+                    'procurement_date' => Carbon::today(),
+                    'status' => 'draft',
+                    'notes' => 'Pengadaan kapal dan mesin kapal',
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+            }
         }
 
         // ===============================

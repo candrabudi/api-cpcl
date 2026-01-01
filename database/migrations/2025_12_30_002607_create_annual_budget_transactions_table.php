@@ -9,12 +9,8 @@ return new class extends Migration {
     {
         Schema::create('annual_budget_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('annual_budget_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-            $table->foreignId('procurement_item_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
+            $table->bigInteger('annual_budget_id');
+            $table->bigInteger('procurement_item_id');
             $table->decimal('amount', 20, 2);
             $table->timestamps();
         });

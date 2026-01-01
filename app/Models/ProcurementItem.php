@@ -13,22 +13,15 @@ class ProcurementItem extends Model
         'quantity',
         'unit_price',
         'total_price',
-        'total_paid',
         'delivery_status',
         'estimated_delivery_date',
         'actual_delivery_date',
         'received_at',
     ];
 
-    protected $casts = [
-        'estimated_delivery_date' => 'date',
-        'actual_delivery_date' => 'date',
-        'received_at' => 'date',
-    ];
-
-    public function vendor()
+    public function procurement()
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Procurement::class);
     }
 
     public function plenaryMeetingItem()
@@ -36,13 +29,37 @@ class ProcurementItem extends Model
         return $this->belongsTo(PlenaryMeetingItem::class);
     }
 
-    public function procurement()
+    public function deliveryLogs()
     {
-        return $this->belongsTo(Procurement::class);
+        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
     }
 
-    public function annualBudgetAllocation()
+    public function processLogs()
     {
-        return $this->belongsTo(AnnualBudgetAllocation::class);
+        return $this->hasMany(ProcurementItemProcessStatus::class)->orderByDesc('id');
+    }
+
+    public function item()
+    {
+        return $this->hasOneThrough(
+            Item::class,
+            PlenaryMeetingItem::class,
+            'id',
+            'id',
+            'plenary_meeting_item_id',
+            'item_id'
+        );
+    }
+
+    public function cooperative()
+    {
+        return $this->hasOneThrough(
+            Cooperative::class,
+            PlenaryMeetingItem::class,
+            'id',
+            'id',
+            'plenary_meeting_item_id',
+            'cooperative_id'
+        );
     }
 }

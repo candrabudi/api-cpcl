@@ -9,7 +9,6 @@ return new class extends Migration {
     {
         Schema::create('plenary_meetings', function (Blueprint $table) {
             $table->id();
-
             $table->string('meeting_title');
             $table->date('meeting_date');
             $table->time('meeting_time')->nullable();
@@ -17,7 +16,6 @@ return new class extends Migration {
             $table->string('chairperson')->nullable();
             $table->string('secretary')->nullable();
             $table->text('notes')->nullable();
-
             $table->timestamps();
         });
     }

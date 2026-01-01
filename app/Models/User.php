@@ -36,6 +36,11 @@ class User extends Model implements AuthenticatableContract, JWTSubject
         return $this->hasOne(UserDetail::class, 'user_id');
     }
 
+    public function vendor()
+    {
+        return $this->hasOne(Vendor::class, 'user_id', 'id');
+    }
+
     public function getAuthIdentifierName()
     {
         return 'id';

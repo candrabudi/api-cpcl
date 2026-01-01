@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProcurementItemStatusLog extends Model
+class ProcurementItemProcessStatus extends Model
 {
     protected $fillable = [
         'procurement_item_id',
-        'old_delivery_status',
-        'new_delivery_status',
-        'area_id',
         'status',
-        'status_date',
+        'production_start_date',
+        'production_end_date',
+        'area_id',
         'changed_by',
         'notes',
+        'status_date',
     ];
 
     public function procurementItem(): BelongsTo

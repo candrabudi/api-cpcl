@@ -5,9 +5,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('procurement_items', function (Blueprint $table) {
@@ -21,27 +18,19 @@ return new class extends Migration {
                 ->constrained('plenary_meeting_items')
                 ->restrictOnDelete();
 
-            $table->foreignId('vendor_id')
-                ->constrained('vendors')
-                ->restrictOnDelete();
+            $table->bigInteger('vendor_id');
 
             $table->unsignedInteger('quantity');
             $table->decimal('unit_price', 18, 2);
             $table->decimal('total_price', 18, 2);
 
             $table->string('delivery_status')->default('pending');
-
-            $table->date('estimated_delivery_date')->nullable();
-            $table->date('actual_delivery_date')->nullable();
-            $table->date('received_at')->nullable();
+            $table->enum('process_status', ['pending', 'purchase', 'production', 'completed'])->default('pending');
 
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('procurement_items');

@@ -107,5 +107,32 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->put('/{id}/update', ['uses' => 'ProcurementController@update']);
             $router->delete('/{id}/delete', ['uses' => 'ProcurementController@destroy']);
         });
+
+        $router->group(['prefix' => 'items'], function () use ($router) {
+            $router->get('/', ['uses' => 'ItemController@index']);
+            $router->get('/{id}/show', ['uses' => 'ItemController@show']);
+            $router->post('/store', ['uses' => 'ItemController@store']);
+            $router->put('/{id}/update', ['uses' => 'ItemController@update']);
+            $router->delete('/{id}/delete', ['uses' => 'ItemController@destroy']);
+        });
+
+        $router->group(['prefix' => 'procurements'], function () use ($router) {
+            $router->get('/', ['uses' => 'ProcurementController@index']);                // List semua procurement
+            $router->get('/{id}/show', ['uses' => 'ProcurementController@show']);      // Detail procurement
+            $router->post('/store', ['uses' => 'ProcurementController@store']);        // Create new procurement
+            $router->put('/{id}/update', ['uses' => 'ProcurementController@update']);  // Update procurement
+            $router->delete('/{id}/delete', ['uses' => 'ProcurementController@destroy']); // Delete procurement
+        });
+
+        $router->group(['prefix' => 'vendor'], function () use ($router) {
+            // List all procurement items for the logged-in vendor
+            $router->get('/procurements', 'ProcurementVendorController@index');
+
+            // Update delivery status for a procurement item
+            $router->put('/procurements/{id}/delivery-status', 'ProcurementVendorController@updateDeliveryStatus');
+
+            // Update process status for a procurement item
+            $router->put('/procurements/{id}/process-status', 'ProcurementVendorController@updateProcessStatus');
+        });
     });
 });

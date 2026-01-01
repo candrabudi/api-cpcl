@@ -5,36 +5,29 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('procurement_item_status_logs', function (Blueprint $table) {
+        Schema::create('procurement_item_process_statuses', function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('procurement_item_id')
                 ->constrained('procurement_items')
                 ->cascadeOnDelete();
 
-            $table->string('old_delivery_status')->nullable();
-            $table->string('new_delivery_status');
-
+            $table->enum('status', ['pending', 'purchase', 'production', 'completed']);
+            $table->date('production_start_date')->nullable();
+            $table->date('production_end_date')->nullable();
             $table->foreignId('area_id')->nullable();
-
-            $table->date('status_date');
             $table->bigInteger('changed_by');
             $table->text('notes')->nullable();
+            $table->date('status_date');
 
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('procurement_item_status_logs');
+        Schema::dropIfExists('procurement_item_process_statuses');
     }
 };

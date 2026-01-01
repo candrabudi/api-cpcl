@@ -23,17 +23,21 @@ return new class extends Migration {
                 ->constrained('cpcl_documents')
                 ->nullOnDelete();
 
-            $table->string('vessel_type');
-            $table->string('engine_specification');
+            $table->foreignId('item_id')
+                ->constrained('items')
+                ->restrictOnDelete();
+
             $table->unsignedInteger('package_quantity');
+            $table->string('note')->nullable();
+            $table->string('location')->nullable();
+            $table->decimal('unit_price', 15, 2)->nullable();
 
             $table->timestamps();
 
             $table->unique([
                 'plenary_meeting_id',
                 'cooperative_id',
-                'vessel_type',
-                'engine_specification',
+                'item_id',
             ], 'plenary_unique_item');
         });
     }

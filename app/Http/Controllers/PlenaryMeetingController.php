@@ -6,54 +6,49 @@ use App\Helpers\ApiResponse;
 use App\Models\PlenaryMeeting;
 use App\Models\PlenaryMeetingAttendee;
 use App\Models\PlenaryMeetingItem;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class PlenaryMeetingController extends Controller
 {
+    private function checkAdmin($user)
+    {
+        if ($user->role !== 'admin') {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        return null;
+    }
+
     public function index(Request $request)
     {
-        $perPage = (int) $request->get('per_page', 10);
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
+        }
 
-        $query = PlenaryMeeting::query()
-            ->withCount([
-                'items as total_items',
-                'attendees as total_attendees',
-            ])
-            ->orderByDesc('meeting_date')
+        $perPage = (int) $request->get('per_page', 15);
+
+        $query = PlenaryMeeting::with(['items.item', 'items.cooperative', 'attendees'])
             ->orderByDesc('id');
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('meeting_title', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhere('chairperson', 'like', "%{$search}%");
-            });
+            $query->where('meeting_title', 'like', "%{$request->search}%");
         }
 
-        if ($request->filled('meeting_date')) {
-            $query->whereDate('meeting_date', $request->meeting_date);
-        }
-
-        $data = $query->paginate($perPage);
-
-        return ApiResponse::success('Plenary meetings retrieved', $data);
+        return ApiResponse::success('Plenary meetings retrieved', $query->paginate($perPage));
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        if (!is_numeric($id)) {
-            return ApiResponse::error('Invalid meeting id', 400);
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
         }
 
-        $meeting = PlenaryMeeting::with([
-            'items.cooperative',
-            'items.cpclDocument',
-            'attendees',
-        ])->find($id);
-
+        $meeting = PlenaryMeeting::with(['items.item', 'items.cooperative', 'attendees'])->find($id);
         if (!$meeting) {
             return ApiResponse::error('Plenary meeting not found', 400);
         }
@@ -63,27 +58,32 @@ class PlenaryMeetingController extends Controller
 
     public function store(Request $request)
     {
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
+        }
+
         $validator = Validator::make($request->all(), [
             'meeting_title' => 'required|string|max:255',
             'meeting_date' => 'required|date',
-            'meeting_time' => 'nullable',
+            'meeting_time' => 'nullable|date_format:H:i',
             'location' => 'nullable|string|max:255',
             'chairperson' => 'nullable|string|max:255',
             'secretary' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-
             'items' => 'required|array|min:1',
             'items.*.cooperative_id' => 'required|exists:cooperatives,id',
             'items.*.cpcl_document_id' => 'nullable|exists:cpcl_documents,id',
-            'items.*.vessel_type' => 'required|string|max:255',
-            'items.*.engine_specification' => 'required|string|max:255',
+            'items.*.item_id' => 'required|exists:items,id',
             'items.*.package_quantity' => 'required|integer|min:1',
-
+            'items.*.note' => 'nullable|string|max:255',
+            'items.*.location' => 'nullable|string|max:255',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
             'attendees' => 'nullable|array',
             'attendees.*.name' => 'required|string|max:255',
             'attendees.*.work_unit' => 'required|string|max:255',
             'attendees.*.position' => 'required|string|max:255',
-            'attendees.*.signature' => 'nullable|string',
+            'attendees.*.signature' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -93,76 +93,69 @@ class PlenaryMeetingController extends Controller
         try {
             DB::beginTransaction();
 
-            $meeting = PlenaryMeeting::create($request->only([
-                'meeting_title',
-                'meeting_date',
-                'meeting_time',
-                'location',
-                'chairperson',
-                'secretary',
-                'notes',
-            ]));
+            $meeting = PlenaryMeeting::create([
+                'meeting_title' => $request->meeting_title,
+                'meeting_date' => Carbon::parse($request->meeting_date),
+                'meeting_time' => $request->meeting_time,
+                'location' => $request->location,
+                'chairperson' => $request->chairperson,
+                'secretary' => $request->secretary,
+                'notes' => $request->notes,
+            ]);
 
             foreach ($request->items as $item) {
-                PlenaryMeetingItem::create([
-                    'plenary_meeting_id' => $meeting->id,
-                    'cooperative_id' => $item['cooperative_id'],
-                    'cpcl_document_id' => $item['cpcl_document_id'] ?? null,
-                    'vessel_type' => $item['vessel_type'],
-                    'engine_specification' => $item['engine_specification'],
-                    'package_quantity' => $item['package_quantity'],
-                ]);
+                PlenaryMeetingItem::create(array_merge($item, ['plenary_meeting_id' => $meeting->id]));
             }
 
             if ($request->filled('attendees')) {
                 foreach ($request->attendees as $attendee) {
-                    PlenaryMeetingAttendee::create([
-                        'plenary_meeting_id' => $meeting->id,
-                        'name' => $attendee['name'],
-                        'work_unit' => $attendee['work_unit'],
-                        'position' => $attendee['position'],
-                        'signature' => $attendee['signature'] ?? null,
-                    ]);
+                    PlenaryMeetingAttendee::create(array_merge($attendee, ['plenary_meeting_id' => $meeting->id]));
                 }
             }
 
             DB::commit();
+
+            return ApiResponse::success('Plenary meeting created', $meeting->load('items.item', 'items.cooperative', 'attendees'));
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to create plenary meeting '.$e->getMessage(), 500);
+            return ApiResponse::error('Failed to create plenary meeting: '.$e->getMessage(), 500);
         }
-
-        return ApiResponse::success('Plenary meeting created');
     }
 
     public function update(Request $request, $id)
     {
-        if (!is_numeric($id)) {
-            return ApiResponse::error('Invalid meeting id', 400);
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
+        }
+
+        $meeting = PlenaryMeeting::with(['items', 'attendees'])->find($id);
+        if (!$meeting) {
+            return ApiResponse::error('Plenary meeting not found', 400);
         }
 
         $validator = Validator::make($request->all(), [
             'meeting_title' => 'required|string|max:255',
             'meeting_date' => 'required|date',
-            'meeting_time' => 'nullable',
+            'meeting_time' => 'nullable|date_format:H:i',
             'location' => 'nullable|string|max:255',
             'chairperson' => 'nullable|string|max:255',
             'secretary' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-
             'items' => 'required|array|min:1',
             'items.*.cooperative_id' => 'required|exists:cooperatives,id',
             'items.*.cpcl_document_id' => 'nullable|exists:cpcl_documents,id',
-            'items.*.vessel_type' => 'required|string|max:255',
-            'items.*.engine_specification' => 'required|string|max:255',
+            'items.*.item_id' => 'required|exists:items,id',
             'items.*.package_quantity' => 'required|integer|min:1',
-
+            'items.*.note' => 'nullable|string|max:255',
+            'items.*.location' => 'nullable|string|max:255',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
             'attendees' => 'nullable|array',
             'attendees.*.name' => 'required|string|max:255',
             'attendees.*.work_unit' => 'required|string|max:255',
             'attendees.*.position' => 'required|string|max:255',
-            'attendees.*.signature' => 'nullable|string',
+            'attendees.*.signature' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -172,86 +165,60 @@ class PlenaryMeetingController extends Controller
         try {
             DB::beginTransaction();
 
-            $meeting = PlenaryMeeting::lockForUpdate()->find($id);
+            $meeting->update([
+                'meeting_title' => $request->meeting_title,
+                'meeting_date' => Carbon::parse($request->meeting_date),
+                'meeting_time' => $request->meeting_time,
+                'location' => $request->location,
+                'chairperson' => $request->chairperson,
+                'secretary' => $request->secretary,
+                'notes' => $request->notes,
+            ]);
 
-            if (!$meeting) {
-                DB::rollBack();
-
-                return ApiResponse::error('Plenary meeting not found', 400);
-            }
-
-            $meeting->update($request->only([
-                'meeting_title',
-                'meeting_date',
-                'meeting_time',
-                'location',
-                'chairperson',
-                'secretary',
-                'notes',
-            ]));
-
-            PlenaryMeetingItem::where('plenary_meeting_id', $id)->delete();
-            PlenaryMeetingAttendee::where('plenary_meeting_id', $id)->delete();
-
+            $meeting->items()->delete();
             foreach ($request->items as $item) {
-                PlenaryMeetingItem::create([
-                    'plenary_meeting_id' => $id,
-                    'cooperative_id' => $item['cooperative_id'],
-                    'cpcl_document_id' => $item['cpcl_document_id'] ?? null,
-                    'vessel_type' => $item['vessel_type'],
-                    'engine_specification' => $item['engine_specification'],
-                    'package_quantity' => $item['package_quantity'],
-                ]);
+                PlenaryMeetingItem::create(array_merge($item, ['plenary_meeting_id' => $meeting->id]));
             }
 
+            $meeting->attendees()->delete();
             if ($request->filled('attendees')) {
                 foreach ($request->attendees as $attendee) {
-                    PlenaryMeetingAttendee::create([
-                        'plenary_meeting_id' => $id,
-                        'name' => $attendee['name'],
-                        'work_unit' => $attendee['work_unit'],
-                        'position' => $attendee['position'],
-                        'signature' => $attendee['signature'] ?? null,
-                    ]);
+                    PlenaryMeetingAttendee::create(array_merge($attendee, ['plenary_meeting_id' => $meeting->id]));
                 }
             }
 
             DB::commit();
+
+            return ApiResponse::success('Plenary meeting updated', $meeting->load('items.item', 'items.cooperative', 'attendees'));
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to update plenary meeting', 500);
+            return ApiResponse::error('Failed to update plenary meeting: '.$e->getMessage(), 500);
         }
-
-        return ApiResponse::success('Plenary meeting updated');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        if (!is_numeric($id)) {
-            return ApiResponse::error('Invalid meeting id', 400);
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
+        }
+
+        $meeting = PlenaryMeeting::find($id);
+        if (!$meeting) {
+            return ApiResponse::error('Plenary meeting not found', 400);
         }
 
         try {
             DB::beginTransaction();
-
-            $meeting = PlenaryMeeting::find($id);
-
-            if (!$meeting) {
-                DB::rollBack();
-
-                return ApiResponse::error('Plenary meeting not found', 400);
-            }
-
             $meeting->delete();
-
             DB::commit();
+
+            return ApiResponse::success('Plenary meeting deleted');
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to delete plenary meeting', 500);
+            return ApiResponse::error('Failed to delete plenary meeting: '.$e->getMessage(), 500);
         }
-
-        return ApiResponse::success('Plenary meeting deleted');
     }
 }

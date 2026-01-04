@@ -47,10 +47,6 @@ class AuthController extends Controller
             $trustedLogin = LoginLog::where('user_id', $user->id)
                 ->where('ip_address', $ip)
                 ->whereNotNull('otp_verified_at')
-                ->whereRaw(
-                    'DATE_ADD(otp_verified_at, INTERVAL 10 DAY) >= ?',
-                    [Carbon::now()]
-                )
                 ->latest()
                 ->first();
 

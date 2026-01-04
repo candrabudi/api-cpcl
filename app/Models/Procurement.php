@@ -33,4 +33,11 @@ class Procurement extends Model
     {
         return $this->hasOne(ProcurementItem::class, 'id', 'procurement_id');
     }
+
+    public function itemsOne()
+    {
+        return $this->hasMany(ProcurementItem::class)
+                    ->with(['plenaryMeetingItem', 'plenaryMeetingItem.item'])
+                    ->limit(1);
+    }
 }

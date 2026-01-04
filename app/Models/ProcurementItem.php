@@ -49,6 +49,11 @@ class ProcurementItem extends Model
         return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
     }
 
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
     public function item()
     {
         return $this->hasOneThrough(

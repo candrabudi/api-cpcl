@@ -88,24 +88,40 @@ class ProcurementController extends Controller
             return $adminCheck;
         }
 
-        // return $id;
         $procurement = Procurement::with([
             'plenaryMeeting',
-            'items',
-            'items.statusLogs',
-            'items.processStatuses',
-        ])->where('id', $id)
-        ->first();
+            'items' => function ($query) {
+                $query->with([
+                    'statusLogs',
+                    'processStatuses',
+                    'plenaryMeetingItem.item',
+                    'plenaryMeetingItem.cooperative',
+                    'vendor',
+                ])->limit(1);
+            },
+        ])->where('id', $id)->first();
 
         if (!$procurement) {
             return ApiResponse::error('Procurement not found', 404);
         }
 
-        // Recalculate budget if needed
         $this->recalcBudget($procurement);
 
-        // Hitung total price semua items
         $totalPaid = $procurement->items->sum('total_price');
+
+        $item = $procurement->items->first();
+        $plenaryItem = $item?->plenaryMeetingItem;
+
+        $cooperative = $plenaryItem?->cooperative;
+        if ($cooperative) {
+            $cooperative->total_procurement = $item?->total_price;
+        }
+
+        $extra = [
+            'cooperative' => $cooperative,
+            'product' => $plenaryItem?->item?->name,
+            'vendor' => $item?->vendor,
+        ];
 
         return ApiResponse::success('Procurement detail', [
             'procurement' => $procurement,

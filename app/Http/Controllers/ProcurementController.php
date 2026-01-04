@@ -88,12 +88,14 @@ class ProcurementController extends Controller
             return $adminCheck;
         }
 
+        // return $id;
         $procurement = Procurement::with([
             'plenaryMeeting',
             'items',
-            'items.statusLogs',       // delivery status logs
-            'items.processStatuses',  // process status logs
-        ])->find($id);
+            'items.statusLogs',
+            'items.processStatuses',
+        ])->where('id', $id)
+        ->first();
 
         if (!$procurement) {
             return ApiResponse::error('Procurement not found', 404);

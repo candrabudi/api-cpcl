@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Models\AnnualBudget;
 use App\Models\AnnualBudgetTransaction;
+use App\Models\PlenaryMeetingItem;
 use App\Models\Procurement;
 use App\Models\ProcurementItem;
 use App\Models\ProcurementItemProcessStatus;

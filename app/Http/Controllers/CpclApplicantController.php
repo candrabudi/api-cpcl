@@ -58,79 +58,212 @@ class CpclApplicantController extends Controller
         return ApiResponse::success('CPCL applicant detail', $applicant);
     }
 
+    // public function store(Request $request)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'cpcl_document_id' => 'required|integer|exists:cpcl_documents,id',
+    //         'established_year' => 'nullable|integer|digits:4|min:1900|max:'.date('Y'),
+    //         'group_name' => 'required|string|max:255',
+    //         'cooperative_registration_number' => 'nullable|string|max:255',
+    //         'kusuka_id_number' => 'nullable|string|max:255',
+    //         'street_address' => 'nullable|string|max:255',
+    //         'village' => 'string|required',
+    //         'district' => 'string|required',
+    //         'regency' => 'string|required',
+    //         'province' => 'required',
+    //         'latitude' => 'nullable|numeric|between:-90,90',
+    //         'longitude' => 'nullable|numeric|between:-180,180',
+    //         'phone_number' => 'nullable|string|max:30',
+    //         'email' => 'nullable|email|max:255',
+    //         'member_count' => 'nullable|integer|min:0',
+    //         'chairman_name' => 'nullable|string|max:255',
+    //         'secretary_name' => 'nullable|string|max:255',
+    //         'treasurer_name' => 'nullable|string|max:255',
+    //         'chairman_phone_number' => 'nullable|string|max:30',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return ApiResponse::validationError($validator->errors()->toArray());
+    //     }
+
+    //     $area = Area::where('city_name', $request->regency)
+    //         ->where('district_name', $request->district)
+    //         ->where('sub_district_name', $request->village)
+    //         ->where('province_name', $request->province)
+    //         ->first();
+
+    //     if (!$area) {
+    //         return ApiResponse::error('Invalid area.', 400);
+    //     }
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $cooperative = Cooperative::updateOrCreate(
+    //             [
+    //                 'registration_number' => $request->cooperative_registration_number,
+    //             ],
+    //             [
+    //                 'name' => trim($request->group_name),
+    //                 'area_id' => $area->id,
+    //                 'kusuka_id_number' => $request->kusuka_id_number,
+    //                 'street_address' => $request->street_address,
+    //                 'village' => $request->village,
+    //                 'district' => $request->district,
+    //                 'regency' => $request->regency,
+    //                 'province' => $request->province,
+    //                 'phone_number' => $request->phone_number,
+    //                 'email' => $request->email,
+    //                 'chairman_name' => $request->chairman_name,
+    //                 'secretary_name' => $request->secretary_name,
+    //                 'treasurer_name' => $request->treasurer_name,
+    //                 'chairman_phone_number' => $request->chairman_phone_number,
+    //             ]
+    //         );
+
+    //         $applicant = CpclApplicant::create([
+    //             'cpcl_document_id' => $request->cpcl_document_id,
+    //             'cooperative_id' => $cooperative->id,
+    //         ]);
+
+    //         DB::commit();
+    //     } catch (\Throwable $e) {
+    //         DB::rollBack();
+
+    //         return ApiResponse::error('Failed to create applicant '.$e->getMessage(), 500);
+    //     }
+
+    //     return ApiResponse::success(
+    //         'CPCL applicant created',
+    //         ['id' => $applicant->id],
+    //         201
+    //     );
+    // }
+
+    // public function update(Request $request, $id)
+    // {
+    //     if (!is_numeric($id)) {
+    //         return ApiResponse::error('Invalid applicant id', 400);
+    //     }
+
+    //     $validator = Validator::make($request->all(), [
+    //         'established_year' => 'nullable|integer|digits:4|min:1900|max:'.date('Y'),
+    //         'group_name' => 'sometimes|required|string|max:255',
+    //         'cooperative_registration_number' => 'nullable|string|max:255',
+    //         'kusuka_id_number' => 'nullable|string|max:255',
+    //         'street_address' => 'nullable|string|max:255',
+    //         'village' => 'string|required',
+    //         'district' => 'string|required',
+    //         'regency' => 'string|required',
+    //         'province' => 'string|required',
+    //         'latitude' => 'nullable|numeric|between:-90,90',
+    //         'longitude' => 'nullable|numeric|between:-180,180',
+    //         'phone_number' => 'nullable|string|max:30',
+    //         'email' => 'nullable|email|max:255',
+    //         'member_count' => 'nullable|integer|min:0',
+    //         'chairman_name' => 'nullable|string|max:255',
+    //         'secretary_name' => 'nullable|string|max:255',
+    //         'treasurer_name' => 'nullable|string|max:255',
+    //         'chairman_phone_number' => 'nullable|string|max:30',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return ApiResponse::validationError($validator->errors()->toArray());
+    //     }
+
+    //     $area = Area::where('province_name', $request->province)
+    //         ->where('city_name', $request->regency)
+    //         ->where('district_name', $request->district)
+    //         ->where('sub_district_name', $request->village)
+    //         ->first();
+
+    //     if (!$area) {
+    //         return ApiResponse::error('Invalid area.', 400);
+    //     }
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $applicant = CpclApplicant::lockForUpdate()->find($id);
+
+    //         if (!$applicant) {
+    //             DB::rollBack();
+
+    //             return ApiResponse::error('Applicant not found', 400);
+    //         }
+
+    //         if ($applicant->cooperative_id) {
+    //             Cooperative::where('id', $applicant->cooperative_id)->update([
+    //                 'name' => $request->group_name ?? $applicant->group_name,
+    //                 'registration_number' => $request->cooperative_registration_number,
+    //                 'kusuka_id_number' => $request->kusuka_id_number,
+    //                 'street_address' => $request->street_address,
+    //                 'village' => $request->village,
+    //                 'district' => $request->district,
+    //                 'regency' => $request->regency,
+    //                 'province' => $request->province,
+    //                 'phone_number' => $request->phone_number,
+    //                 'email' => $request->email,
+    //                 'chairman_name' => $request->chairman_name,
+    //                 'secretary_name' => $request->secretary_name,
+    //                 'treasurer_name' => $request->treasurer_name,
+    //                 'chairman_phone_number' => $request->chairman_phone_number,
+    //             ]);
+    //         }
+
+    //         $applicant->update([
+    //             'area_id' => $area->id,
+    //             'established_year' => $request->established_year,
+    //             'group_name' => $request->group_name ?? $applicant->group_name,
+    //             'cooperative_registration_number' => $request->cooperative_registration_number,
+    //             'kusuka_id_number' => $request->kusuka_id_number,
+    //             'street_address' => $request->street_address,
+    //             'village' => $request->village,
+    //             'district' => $request->district,
+    //             'regency' => $request->regency,
+    //             'province' => $request->province,
+    //             'latitude' => $request->latitude,
+    //             'longitude' => $request->longitude,
+    //             'phone_number' => $request->phone_number,
+    //             'email' => $request->email,
+    //             'member_count' => $request->member_count ?? $applicant->member_count,
+    //             'chairman_name' => $request->chairman_name,
+    //             'secretary_name' => $request->secretary_name,
+    //             'treasurer_name' => $request->treasurer_name,
+    //             'chairman_phone_number' => $request->chairman_phone_number,
+    //         ]);
+
+    //         DB::commit();
+    //     } catch (\Throwable $e) {
+    //         DB::rollBack();
+
+    //         return ApiResponse::error('Failed to update applicant '.$e->getMessage(), 500);
+    //     }
+
+    //     return ApiResponse::success('CPCL applicant updated');
+    // }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'cpcl_document_id' => 'required|integer|exists:cpcl_documents,id',
-            'established_year' => 'nullable|integer|digits:4|min:1900|max:'.date('Y'),
-            'group_name' => 'required|string|max:255',
-            'cooperative_registration_number' => 'nullable|string|max:255',
-            'kusuka_id_number' => 'nullable|string|max:255',
-            'street_address' => 'nullable|string|max:255',
-            'village' => 'string|required',
-            'district' => 'string|required',
-            'regency' => 'string|required',
-            'province' => 'required',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'phone_number' => 'nullable|string|max:30',
-            'email' => 'nullable|email|max:255',
-            'member_count' => 'nullable|integer|min:0',
-            'chairman_name' => 'nullable|string|max:255',
-            'secretary_name' => 'nullable|string|max:255',
-            'treasurer_name' => 'nullable|string|max:255',
-            'chairman_phone_number' => 'nullable|string|max:30',
+            'cooperative_id' => 'required|integer|exists:cooperatives,id',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        $area = Area::where('city_name', $request->regency)
-            ->where('district_name', $request->district)
-            ->where('sub_district_name', $request->village)
-            ->where('province_name', $request->province)
-            ->first();
-
-        if (!$area) {
-            return ApiResponse::error('Invalid area.', 400);
-        }
-
         try {
-            DB::beginTransaction();
-
-            $cooperative = Cooperative::updateOrCreate(
-                [
-                    'registration_number' => $request->cooperative_registration_number,
-                ],
-                [
-                    'name' => trim($request->group_name),
-                    'area_id' => $area->id,
-                    'kusuka_id_number' => $request->kusuka_id_number,
-                    'street_address' => $request->street_address,
-                    'village' => $request->village,
-                    'district' => $request->district,
-                    'regency' => $request->regency,
-                    'province' => $request->province,
-                    'phone_number' => $request->phone_number,
-                    'email' => $request->email,
-                    'chairman_name' => $request->chairman_name,
-                    'secretary_name' => $request->secretary_name,
-                    'treasurer_name' => $request->treasurer_name,
-                    'chairman_phone_number' => $request->chairman_phone_number,
-                ]
-            );
-
             $applicant = CpclApplicant::create([
                 'cpcl_document_id' => $request->cpcl_document_id,
-                'cooperative_id' => $cooperative->id,
+                'cooperative_id' => $request->cooperative_id,
             ]);
-
-            DB::commit();
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return ApiResponse::error('Failed to create applicant '.$e->getMessage(), 500);
+            return ApiResponse::error(
+                'Failed to create applicant '.$e->getMessage(),
+                500
+            );
         }
 
         return ApiResponse::success(
@@ -147,97 +280,30 @@ class CpclApplicantController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'established_year' => 'nullable|integer|digits:4|min:1900|max:'.date('Y'),
-            'group_name' => 'sometimes|required|string|max:255',
-            'cooperative_registration_number' => 'nullable|string|max:255',
-            'kusuka_id_number' => 'nullable|string|max:255',
-            'street_address' => 'nullable|string|max:255',
-            'village' => 'string|required',
-            'district' => 'string|required',
-            'regency' => 'string|required',
-            'province' => 'string|required',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'phone_number' => 'nullable|string|max:30',
-            'email' => 'nullable|email|max:255',
-            'member_count' => 'nullable|integer|min:0',
-            'chairman_name' => 'nullable|string|max:255',
-            'secretary_name' => 'nullable|string|max:255',
-            'treasurer_name' => 'nullable|string|max:255',
-            'chairman_phone_number' => 'nullable|string|max:30',
+            'cpcl_document_id' => 'sometimes|required|integer|exists:cpcl_documents,id',
+            'cooperative_id' => 'sometimes|required|integer|exists:cooperatives,id',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        $area = Area::where('province_name', $request->province)
-            ->where('city_name', $request->regency)
-            ->where('district_name', $request->district)
-            ->where('sub_district_name', $request->village)
-            ->first();
-
-        if (!$area) {
-            return ApiResponse::error('Invalid area.', 400);
-        }
-
         try {
-            DB::beginTransaction();
-
-            $applicant = CpclApplicant::lockForUpdate()->find($id);
+            $applicant = CpclApplicant::find($id);
 
             if (!$applicant) {
-                DB::rollBack();
-
-                return ApiResponse::error('Applicant not found', 400);
-            }
-
-            if ($applicant->cooperative_id) {
-                Cooperative::where('id', $applicant->cooperative_id)->update([
-                    'name' => $request->group_name ?? $applicant->group_name,
-                    'registration_number' => $request->cooperative_registration_number,
-                    'kusuka_id_number' => $request->kusuka_id_number,
-                    'street_address' => $request->street_address,
-                    'village' => $request->village,
-                    'district' => $request->district,
-                    'regency' => $request->regency,
-                    'province' => $request->province,
-                    'phone_number' => $request->phone_number,
-                    'email' => $request->email,
-                    'chairman_name' => $request->chairman_name,
-                    'secretary_name' => $request->secretary_name,
-                    'treasurer_name' => $request->treasurer_name,
-                    'chairman_phone_number' => $request->chairman_phone_number,
-                ]);
+                return ApiResponse::error('Applicant not found', 404);
             }
 
             $applicant->update([
-                'area_id' => $area->id,
-                'established_year' => $request->established_year,
-                'group_name' => $request->group_name ?? $applicant->group_name,
-                'cooperative_registration_number' => $request->cooperative_registration_number,
-                'kusuka_id_number' => $request->kusuka_id_number,
-                'street_address' => $request->street_address,
-                'village' => $request->village,
-                'district' => $request->district,
-                'regency' => $request->regency,
-                'province' => $request->province,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'phone_number' => $request->phone_number,
-                'email' => $request->email,
-                'member_count' => $request->member_count ?? $applicant->member_count,
-                'chairman_name' => $request->chairman_name,
-                'secretary_name' => $request->secretary_name,
-                'treasurer_name' => $request->treasurer_name,
-                'chairman_phone_number' => $request->chairman_phone_number,
+                'cpcl_document_id' => $request->cpcl_document_id ?? $applicant->cpcl_document_id,
+                'cooperative_id' => $request->cooperative_id ?? $applicant->cooperative_id,
             ]);
-
-            DB::commit();
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return ApiResponse::error('Failed to update applicant '.$e->getMessage(), 500);
+            return ApiResponse::error(
+                'Failed to update applicant '.$e->getMessage(),
+                500
+            );
         }
 
         return ApiResponse::success('CPCL applicant updated');

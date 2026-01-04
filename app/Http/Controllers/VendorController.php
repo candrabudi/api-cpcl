@@ -64,6 +64,121 @@ class VendorController extends Controller
         return ApiResponse::success('Vendor detail', $vendor);
     }
 
+    public function showWithProcurements(Request $request, $vendorID)
+    {
+        $vendor = Vendor::where('id', $vendorID)->first();
+        $vendorId = $vendorID;
+
+        $itemsQuery = ProcurementItem::with('procurement')
+            ->where('vendor_id', $vendorId);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $itemsQuery->whereHas('procurement', function ($q) use ($search) {
+                $q->where('procurement_number', 'like', "%$search%");
+            });
+        }
+
+        $items = $itemsQuery->get();
+
+        // Total seluruh pembayaran untuk vendor
+        $totalPaid = $items->sum('total_price');
+
+        // Group per procurement, hanya tampilkan total
+        $procurements = $items->groupBy('procurement_id')->map(function ($group) {
+            $procurement = $group->first()->procurement;
+            $procurementTotal = $group->sum('total_price');
+
+            return [
+                'procurement_id' => $procurement->id,
+                'procurement_number' => $procurement->procurement_number,
+                'procurement_date' => $procurement->procurement_date,
+                'total_spent' => $procurementTotal,
+            ];
+        })->values();
+
+        return ApiResponse::success('Vendor procurement summary retrieved', [
+            'vendor' => [
+                'id' => $vendor->id,
+                'name' => $vendor->name,
+                'npwp' => $vendor->npwp,
+                'contact_person' => $vendor->contact_person,
+                'phone' => $vendor->phone,
+                'email' => $vendor->email,
+                'address' => $vendor->address,
+                'total_paid' => $totalPaid,
+            ],
+            'procurements' => $procurements,
+        ]);
+    }
+
+    public function getVendorProcurementItems(Request $request, $vendorID, $procurementID)
+    {
+        $items = ProcurementItem::with([
+            'procurement',
+            'plenaryMeetingItem.item',
+            'plenaryMeetingItem.cooperative',
+            'statusLogs',
+            'processStatuses',
+        ])
+        ->where('vendor_id', $vendorID)
+        ->where('procurement_id', $procurementID)
+        ->get();
+
+        if ($items->isEmpty()) {
+            return ApiResponse::error('No items found for this vendor and procurement', 404);
+        }
+
+        $totalSpent = $items->sum('total_price');
+
+        $procurement = $items->first()->procurement;
+
+        $itemsData = $items->map(function ($item) {
+            return [
+                'procurement_item_id' => $item->id,
+                'item_id' => $item->plenaryMeetingItem->item->id,
+                'item_name' => $item->plenaryMeetingItem->item->name,
+                'cooperative' => optional($item->plenaryMeetingItem->cooperative)->name,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'total_price' => $item->total_price,
+                'delivery_status' => $item->delivery_status,
+                'process_status' => $item->process_status,
+                'status_logs' => $item->statusLogs->map(function ($log) {
+                    return [
+                        'old_delivery_status' => $log->old_delivery_status,
+                        'new_delivery_status' => $log->new_delivery_status,
+                        'area_id' => $log->area_id,
+                        'status_date' => $log->status_date,
+                        'changed_by' => $log->changed_by,
+                        'notes' => $log->notes,
+                    ];
+                }),
+                'process_statuses' => $item->processStatuses->map(function ($status) {
+                    return [
+                        'status' => $status->status,
+                        'production_start_date' => $status->production_start_date,
+                        'production_end_date' => $status->production_end_date,
+                        'area_id' => $status->area_id,
+                        'changed_by' => $status->changed_by,
+                        'status_date' => $status->status_date,
+                        'notes' => $status->notes,
+                    ];
+                }),
+            ];
+        });
+
+        return ApiResponse::success('Procurement items retrieved', [
+            'procurement' => [
+                'id' => $procurement->id,
+                'procurement_number' => $procurement->procurement_number,
+                'procurement_date' => $procurement->procurement_date,
+                'total_spent' => $totalSpent,
+            ],
+            'items' => $itemsData,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -25,9 +25,4 @@ class PlenaryMeeting extends Model
     {
         return $this->hasMany(PlenaryMeetingAttendee::class);
     }
-
-    public function procurementItem()
-    {
-        return $this->hasOne(ProcurementItem::class, 'plenary_meeting_item_id');
-    }
 }

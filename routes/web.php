@@ -102,6 +102,9 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'VendorController@store');
                 $router->put('/{id}/update', 'VendorController@update');
                 $router->delete('/{id}/delete', 'VendorController@destroy');
+                $router->get('/procurements/{vendorID}/show', 'VendorController@showWithProcurements');
+
+                $router->get('/procurements/{vendorID}/{procurementID}/items', 'VendorController@getVendorProcurementItems');
             });
 
             $router->group(['prefix' => 'procurements'], function () use ($router) {

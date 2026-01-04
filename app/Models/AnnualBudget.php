@@ -9,6 +9,8 @@ class AnnualBudget extends Model
     protected $fillable = [
         'budget_year',
         'total_budget',
+        'used_budget',
+        'remaining_budget',
     ];
 
     protected $appends = ['used_budget', 'remaining_budget'];

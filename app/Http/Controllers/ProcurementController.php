@@ -123,15 +123,10 @@ class ProcurementController extends Controller
             'procurement_number' => 'required|string|unique:procurements,procurement_number',
             'procurement_date' => 'required|date',
             'notes' => 'nullable|string',
+
             'items' => 'required|array|min:1',
             'items.*.plenary_meeting_item_id' => 'required|exists:plenary_meeting_items,id',
             'items.*.vendor_id' => 'required|integer',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.delivery_status' => 'nullable|string|max:255',
-            'items.*.process_status' => 'nullable|in:pending,purchase,production,completed',
-            'items.*.production_start_date' => 'nullable|date',
-            'items.*.production_end_date' => 'nullable|date|after_or_equal:items.*.production_start_date',
         ]);
 
         if ($validator->fails()) {
@@ -141,9 +136,8 @@ class ProcurementController extends Controller
         try {
             DB::beginTransaction();
 
-            $currentYear = Carbon::now()->year;
             $annualBudget = AnnualBudget::firstOrCreate(
-                ['budget_year' => $currentYear],
+                ['budget_year' => Carbon::now()->year],
                 ['total_budget' => 0, 'used_budget' => 0, 'remaining_budget' => 0]
             );
 
@@ -157,38 +151,47 @@ class ProcurementController extends Controller
             ]);
 
             foreach ($request->items as $item) {
+                $meetingItem = PlenaryMeetingItem::findOrFail($item['plenary_meeting_item_id']);
+
+                if (!$meetingItem->package_quantity || !$meetingItem->unit_price) {
+                    return ApiResponse::error(
+                        'Package quantity or unit price not defined for plenary meeting item ID '.$meetingItem->id,
+                        422
+                    );
+                }
+
+                $quantity = $meetingItem->package_quantity;
+                $unitPrice = $meetingItem->unit_price;
+                $totalPrice = $quantity * $unitPrice;
+
                 $procItem = ProcurementItem::create([
                     'procurement_id' => $procurement->id,
-                    'plenary_meeting_item_id' => $item['plenary_meeting_item_id'],
+                    'plenary_meeting_item_id' => $meetingItem->id,
                     'vendor_id' => $item['vendor_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['quantity'] * $item['unit_price'],
-                    'delivery_status' => $item['delivery_status'] ?? 'pending',
-                    'process_status' => $item['process_status'] ?? 'pending',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
+                    'delivery_status' => 'pending',
+                    'process_status' => 'pending',
                 ]);
 
                 AnnualBudgetTransaction::create([
                     'annual_budget_id' => $annualBudget->id,
                     'procurement_item_id' => $procItem->id,
-                    'amount' => $procItem->total_price,
+                    'amount' => $totalPrice,
                 ]);
 
-                // create initial process status log if provided
                 ProcurementItemProcessStatus::create([
                     'procurement_item_id' => $procItem->id,
                     'status' => 'pending',
-                    'production_start_date' => $item['production_start_date'] ?? null,
-                    'production_end_date' => $item['production_end_date'] ?? null,
                     'changed_by' => $request->user()->id,
                     'status_date' => Carbon::now()->format('Y-m-d'),
                 ]);
 
-                // create initial delivery status log
                 ProcurementItemStatusLog::create([
                     'procurement_item_id' => $procItem->id,
                     'old_delivery_status' => null,
-                    'new_delivery_status' => $procItem->delivery_status,
+                    'new_delivery_status' => 'pending',
                     'changed_by' => $request->user()->id,
                     'status_date' => Carbon::now()->format('Y-m-d'),
                 ]);
@@ -198,7 +201,10 @@ class ProcurementController extends Controller
 
             DB::commit();
 
-            return ApiResponse::success('Procurement created', $procurement->load('items'));
+            return ApiResponse::success(
+                'Procurement created',
+                $procurement->load('items')
+            );
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -222,17 +228,11 @@ class ProcurementController extends Controller
             'plenary_meeting_id' => 'required|exists:plenary_meetings,id',
             'procurement_number' => 'required|string|unique:procurements,procurement_number,'.$id,
             'procurement_date' => 'required|date',
-            'status' => 'nullable|in:draft,approved,contracted,in_progress,completed,cancelled',
             'notes' => 'nullable|string',
+
             'items' => 'required|array|min:1',
             'items.*.plenary_meeting_item_id' => 'required|exists:plenary_meeting_items,id',
             'items.*.vendor_id' => 'required|integer',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.delivery_status' => 'nullable|string|max:255',
-            'items.*.process_status' => 'nullable|in:pending,purchase,production,completed',
-            'items.*.production_start_date' => 'nullable|date',
-            'items.*.production_end_date' => 'nullable|date|after_or_equal:items.*.production_start_date',
         ]);
 
         if ($validator->fails()) {
@@ -242,17 +242,12 @@ class ProcurementController extends Controller
         try {
             DB::beginTransaction();
 
-            $currentYear = Carbon::now()->year;
-            $annualBudget = AnnualBudget::where('budget_year', $currentYear)->first();
-            if (!$annualBudget) {
-                return ApiResponse::error('Annual budget for current year not found', 400);
-            }
+            $annualBudget = AnnualBudget::where('budget_year', Carbon::now()->year)->firstOrFail();
 
             $procurement->update([
                 'plenary_meeting_id' => $request->plenary_meeting_id,
                 'procurement_number' => $request->procurement_number,
                 'procurement_date' => Carbon::parse($request->procurement_date),
-                'status' => $request->status ?? $procurement->status,
                 'notes' => $request->notes,
                 'annual_budget_id' => $annualBudget->id,
             ]);
@@ -260,28 +255,39 @@ class ProcurementController extends Controller
             $procurement->items()->delete();
 
             foreach ($request->items as $item) {
+                $meetingItem = PlenaryMeetingItem::findOrFail($item['plenary_meeting_item_id']);
+
+                if (!$meetingItem->package_quantity || !$meetingItem->unit_price) {
+                    return ApiResponse::error(
+                        'Package quantity or unit price not defined for plenary meeting item ID '.$meetingItem->id,
+                        422
+                    );
+                }
+
+                $quantity = $meetingItem->package_quantity;
+                $unitPrice = $meetingItem->unit_price;
+                $totalPrice = $quantity * $unitPrice;
+
                 $procItem = ProcurementItem::create([
                     'procurement_id' => $procurement->id,
-                    'plenary_meeting_item_id' => $item['plenary_meeting_item_id'],
+                    'plenary_meeting_item_id' => $meetingItem->id,
                     'vendor_id' => $item['vendor_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['quantity'] * $item['unit_price'],
-                    'delivery_status' => $item['delivery_status'] ?? 'pending',
-                    'process_status' => $item['process_status'] ?? 'pending',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
+                    'delivery_status' => 'pending',
+                    'process_status' => 'pending',
                 ]);
 
                 AnnualBudgetTransaction::create([
                     'annual_budget_id' => $annualBudget->id,
                     'procurement_item_id' => $procItem->id,
-                    'amount' => $procItem->total_price,
+                    'amount' => $totalPrice,
                 ]);
 
                 ProcurementItemProcessStatus::create([
                     'procurement_item_id' => $procItem->id,
-                    'status' => $procItem->process_status,
-                    'production_start_date' => $item['production_start_date'] ?? null,
-                    'production_end_date' => $item['production_end_date'] ?? null,
+                    'status' => 'pending',
                     'changed_by' => $request->user()->id,
                     'status_date' => Carbon::now()->format('Y-m-d'),
                 ]);
@@ -289,7 +295,7 @@ class ProcurementController extends Controller
                 ProcurementItemStatusLog::create([
                     'procurement_item_id' => $procItem->id,
                     'old_delivery_status' => null,
-                    'new_delivery_status' => $procItem->delivery_status,
+                    'new_delivery_status' => 'pending',
                     'changed_by' => $request->user()->id,
                     'status_date' => Carbon::now()->format('Y-m-d'),
                 ]);
@@ -299,7 +305,10 @@ class ProcurementController extends Controller
 
             DB::commit();
 
-            return ApiResponse::success('Procurement updated', $procurement->load('items'));
+            return ApiResponse::success(
+                'Procurement updated',
+                $procurement->load('items')
+            );
         } catch (\Throwable $e) {
             DB::rollBack();
 

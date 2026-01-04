@@ -44,19 +44,34 @@ class AuthController extends Controller
                 return ApiResponse::error('Invalid credentials', 401);
             }
 
-            $validLogin = LoginLog::where('user_id', $user->id)
+            $trustedLogin = LoginLog::where('user_id', $user->id)
                 ->where('ip_address', $ip)
                 ->whereNotNull('otp_verified_at')
                 ->where('otp_verified_at', '>=', Carbon::now()->subDays(3))
                 ->latest()
                 ->first();
 
-            if ($validLogin) {
+            if ($trustedLogin) {
+                LoginLog::create([
+                    'user_id' => $user->id,
+                    'ip_address' => $ip,
+                    'otp_verified_at' => $trustedLogin->otp_verified_at,
+                ]);
+
                 $token = JWTAuth::fromUser($user);
 
                 return ApiResponse::success('Login success', [
-                    'token' => $token,
+                    'access_token' => $token,
+                    'token_type' => 'Bearer',
+                    'expires_in' => JWTAuth::factory()->getTTL() * 60,
                     'otp_required' => false,
+                    'user' => [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'avatar_url' => $user->avatar_url,
+                    ],
                 ]);
             }
 
@@ -75,8 +90,9 @@ class AuthController extends Controller
             dispatch(new SendLoginOtpJob($user->email, $otp));
 
             return ApiResponse::success('OTP sent', [
-                'email' => $user->email,
                 'otp_required' => true,
+                'email' => $user->email,
+                'expired_in' => 300,
             ]);
         } catch (\Throwable $e) {
             return ApiResponse::error('Login failed '.$e->getMessage(), 400);
@@ -122,8 +138,17 @@ class AuthController extends Controller
             $token = JWTAuth::fromUser($user);
 
             return ApiResponse::success('Login success', [
-                'token' => $token,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
                 'otp_required' => false,
+                'user' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'avatar_url' => $user->avatar_url,
+                ],
             ]);
         } catch (\Throwable $e) {
             return ApiResponse::error('OTP verification failed '.$e->getMessage(), 400);
@@ -140,7 +165,7 @@ class AuthController extends Controller
 
         return ApiResponse::success('Token refreshed', [
             'access_token' => $newToken,
-            'token_type' => 'bearer',
+            'token_type' => 'Bearer',
             'expires_in' => JWTAuth::factory()->getTTL() * 60,
         ]);
     }
@@ -154,20 +179,5 @@ class AuthController extends Controller
         }
 
         return ApiResponse::success('Logout successful');
-    }
-
-    protected function respondWithToken(string $token, User $user)
-    {
-        return ApiResponse::success('Login successful', [
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60,
-            'user' => [
-                'id' => $user->id,
-                'username' => $user->username,
-                'email' => $user->email,
-                'role' => $user->role,
-            ],
-        ]);
     }
 }

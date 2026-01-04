@@ -23,4 +23,14 @@ class Procurement extends Model
     {
         return $this->belongsTo(PlenaryMeeting::class);
     }
+
+    public function processStatuses()
+    {
+        return $this->hasOne(ProcurementItemProcessStatus::class, 'id', 'procurement_id');
+    }
+
+    public function ProcurementItem()
+    {
+        return $this->hasOne(ProcurementItem::class, 'id', 'procurement_id');
+    }
 }

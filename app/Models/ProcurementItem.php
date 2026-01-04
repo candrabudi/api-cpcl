@@ -39,6 +39,16 @@ class ProcurementItem extends Model
         return $this->hasMany(ProcurementItemProcessStatus::class)->orderByDesc('id');
     }
 
+    public function statusLogs()
+    {
+        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
+    }
+
+    public function processStatuses()
+    {
+        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
+    }
+
     public function item()
     {
         return $this->hasOneThrough(

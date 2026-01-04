@@ -110,6 +110,75 @@ class CooperativeController extends Controller
         ]);
     }
 
+    public function getCooperativeProcurementItems(Request $request, $cooperativeID, $procurementID)
+    {
+        $items = ProcurementItem::with([
+            'procurement',
+            'plenaryMeetingItem.item',
+            'plenaryMeetingItem.cooperative',
+            'statusLogs',
+            'processStatuses',
+        ])
+        ->whereHas('plenaryMeetingItem', function ($q) use ($cooperativeID) {
+            $q->where('cooperative_id', $cooperativeID);
+        })
+        ->where('procurement_id', $procurementID)
+        ->get();
+
+        if ($items->isEmpty()) {
+            return ApiResponse::error('No items found for this cooperative and procurement', 404);
+        }
+
+        $totalSpent = $items->sum('total_price');
+
+        $procurement = $items->first()->procurement;
+
+        $itemsData = $items->map(function ($item) {
+            return [
+                'procurement_item_id' => $item->id,
+                'item_id' => $item->plenaryMeetingItem->item->id,
+                'item_name' => $item->plenaryMeetingItem->item->name,
+                'vendor_id' => $item->vendor_id,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'total_price' => $item->total_price,
+                'delivery_status' => $item->delivery_status,
+                'process_status' => $item->process_status,
+                'status_logs' => $item->statusLogs->map(function ($log) {
+                    return [
+                        'old_delivery_status' => $log->old_delivery_status,
+                        'new_delivery_status' => $log->new_delivery_status,
+                        'area_id' => $log->area_id,
+                        'status_date' => $log->status_date,
+                        'changed_by' => $log->changed_by,
+                        'notes' => $log->notes,
+                    ];
+                }),
+                'process_statuses' => $item->processStatuses->map(function ($status) {
+                    return [
+                        'status' => $status->status,
+                        'production_start_date' => $status->production_start_date,
+                        'production_end_date' => $status->production_end_date,
+                        'area_id' => $status->area_id,
+                        'changed_by' => $status->changed_by,
+                        'status_date' => $status->status_date,
+                        'notes' => $status->notes,
+                    ];
+                }),
+            ];
+        });
+
+        return ApiResponse::success('Procurement items retrieved for cooperative', [
+            'procurement' => [
+                'id' => $procurement->id,
+                'procurement_number' => $procurement->procurement_number,
+                'procurement_date' => $procurement->procurement_date,
+                'total_spent' => $totalSpent,
+            ],
+            'items' => $itemsData,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [

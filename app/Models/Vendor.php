@@ -32,4 +32,9 @@ class Vendor extends Model
     {
         return $this->hasMany(ProcurementItem::class);
     }
+
+    public function documents()
+    {
+        return $this->hasMany(VendorDocument::class);
+    }
 }

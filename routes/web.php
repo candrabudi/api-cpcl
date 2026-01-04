@@ -62,6 +62,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->delete('{id}/delete', 'CooperativeController@destroy');
 
                 $router->get('{cooperativeID}/procurements', 'CooperativeController@getCooperativeProcurements');
+                $router->get('{cooperativeID}/procurements/{procurementID}/items', 'CooperativeController@getCooperativeProcurementItems');
             });
 
             $router->group(['prefix' => 'cpcl-answers'], function () use ($router) {
@@ -102,7 +103,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->get('/', 'VendorController@index');
                 $router->get('/{id}/show', 'VendorController@show');
                 $router->post('/store', 'VendorController@store');
-                $router->put('/{id}/update', 'VendorController@update');
+                $router->post('/{id}/update', 'VendorController@update');
                 $router->delete('/{id}/delete', 'VendorController@destroy');
                 $router->get('/procurements/{vendorID}/show', 'VendorController@showWithProcurements');
 

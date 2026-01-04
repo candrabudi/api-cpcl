@@ -9,6 +9,7 @@ use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class VendorController extends Controller
@@ -189,6 +190,9 @@ class VendorController extends Controller
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:100',
             'address' => 'nullable|string',
+            'documents' => 'nullable|array',
+            'documents.*.document_type_id' => 'required_with:documents|exists:document_types,id',
+            'documents.*.file' => 'required_with:documents|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -228,6 +232,20 @@ class VendorController extends Controller
                 'address' => $request->address ?? null,
             ]);
 
+            // Simpan dokumen jika ada
+            if ($request->has('documents')) {
+                foreach ($request->documents as $doc) {
+                    if (isset($doc['file'])) {
+                        // Lumen + Flysystem v2 compatible
+                        $path = Storage::disk('public')->putFile('vendor_docs', $doc['file']);
+                        $vendor->documents()->create([
+                            'document_type_id' => $doc['document_type_id'],
+                            'file_path' => $path,
+                        ]);
+                    }
+                }
+            }
+
             $this->recalcVendorTotals($vendor);
 
             DB::commit();
@@ -250,19 +268,44 @@ class VendorController extends Controller
             return ApiResponse::error('Invalid vendor id', 400);
         }
 
-        $vendor = Vendor::with('user')->find($id);
+        $vendor = Vendor::with('user', 'documents')->find($id);
         if (!$vendor) {
             return ApiResponse::error('Vendor not found', 400);
+        }
+
+        // Cek duplicate npwp (di luar vendor ini)
+        if ($request->filled('npwp')) {
+            $existsNpwp = Vendor::where('npwp', $request->npwp)
+                ->where('id', '!=', $id)
+                ->exists();
+            if ($existsNpwp) {
+                return ApiResponse::validationError([
+                    'npwp' => ['NPWP sudah digunakan oleh vendor lain.'],
+                ]);
+            }
+        }
+
+        // Cek duplicate email di user (di luar user ini)
+        if ($request->filled('email')) {
+            $existsEmail = User::where('email', $request->email)
+                ->where('id', '!=', $vendor->user_id)
+                ->exists();
+            if ($existsEmail) {
+                return ApiResponse::validationError([
+                    'email' => ['Email sudah digunakan oleh user lain.'],
+                ]);
+            }
         }
 
         $validator = Validator::make($request->all(), [
             'area_id' => 'required|exists:areas,id',
             'name' => 'required|string|max:255',
-            'npwp' => 'nullable|string|unique:vendors,npwp,'.$id,
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:100',
             'address' => 'nullable|string',
+            'documents' => 'nullable|array',
+            'documents.*.document_type_id' => 'required_with:documents|exists:document_types,id',
+            'documents.*.file' => 'required_with:documents|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -272,10 +315,12 @@ class VendorController extends Controller
         try {
             DB::beginTransaction();
 
+            // Update user email
             $vendor->user->update([
                 'email' => $request->email ?? $vendor->user->email,
             ]);
 
+            // Update vendor data
             $vendor->update([
                 'area_id' => $request->area_id,
                 'name' => $request->name,
@@ -286,13 +331,25 @@ class VendorController extends Controller
                 'address' => $request->address ?? null,
             ]);
 
+            if ($request->has('documents')) {
+                foreach ($request->documents as $doc) {
+                    if (isset($doc['file'])) {
+                        $path = Storage::disk('public')->putFile('vendor_docs', $doc['file']);
+                        $vendor->documents()->create([
+                            'document_type_id' => $doc['document_type_id'],
+                            'file_path' => $path,
+                        ]);
+                    }
+                }
+            }
+
             $this->recalcVendorTotals($vendor);
 
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to update vendor', 500);
+            return ApiResponse::error('Failed to update vendor: '.$e->getMessage(), 500);
         }
 
         return ApiResponse::success('Vendor updated');

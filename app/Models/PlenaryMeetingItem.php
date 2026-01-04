@@ -41,4 +41,36 @@ class PlenaryMeetingItem extends Model
     {
         return $this->hasMany(ProcurementItem::class);
     }
+
+    public function procurementItem()
+    {
+        return $this->hasOne(ProcurementItem::class, 'plenary_meeting_item_id');
+    }
+
+    public function plenaryMeeting()
+    {
+        return $this->belongsTo(
+            PlenaryMeeting::class,
+            'plenary_meeting_id',
+            'id'
+        );
+    }
+
+    public function items()
+    {
+        return $this->hasMany(
+            PlenaryMeetingItem::class,
+            'plenary_meeting_id',
+            'id'
+        );
+    }
+
+    public function attendees()
+    {
+        return $this->hasMany(
+            PlenaryMeetingAttendee::class,
+            'plenary_meeting_id',
+            'id'
+        );
+    }
 }

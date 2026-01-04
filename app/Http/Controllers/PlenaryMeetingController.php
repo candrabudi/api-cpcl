@@ -41,6 +41,37 @@ class PlenaryMeetingController extends Controller
         return ApiResponse::success('Plenary meetings retrieved', $query->paginate($perPage));
     }
 
+    public function listUnpronouncedPlenaryMeetings(Request $request)
+    {
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) {
+            return $adminCheck;
+        }
+
+        $perPage = (int) $request->get('per_page', 15);
+
+        $query = PlenaryMeeting::with([
+            'items' => function ($q) {
+                $q->whereDoesntHave('procurementItem')
+                  ->with(['item', 'cooperative']);
+            },
+            'attendees',
+        ])
+            ->whereHas('items', function ($q) {
+                $q->whereDoesntHave('procurementItem');
+            })
+            ->orderByDesc('id');
+
+        if ($request->filled('search')) {
+            $query->where('meeting_title', 'like', '%'.$request->search.'%');
+        }
+
+        return ApiResponse::success(
+            'Plenary meetings with unpronounced items retrieved',
+            $query->paginate($perPage)
+        );
+    }
+
     public function show(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());

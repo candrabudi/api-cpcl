@@ -83,6 +83,9 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'PlenaryMeetingController@store');
                 $router->put('{id}/update', 'PlenaryMeetingController@update');
                 $router->delete('{id}/delete', 'PlenaryMeetingController@destroy');
+                $router->get('/unpronounced-items',
+                    'PlenaryMeetingController@listUnpronouncedPlenaryMeetings'
+                );
             });
 
             $router->group(['prefix' => 'annual-budgets'], function () use ($router) {

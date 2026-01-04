@@ -15,6 +15,32 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+    protected function getUserIp(Request $request): string
+    {
+        if ($request->headers->has('CF-Connecting-IP')) {
+            return $request->headers->get('CF-Connecting-IP');
+        }
+
+        if ($request->headers->has('X-Forwarded-For')) {
+            $ips = explode(',', $request->headers->get('X-Forwarded-For'));
+
+            return trim($ips[0]);
+        }
+
+        if ($request->headers->has('X-Real-IP')) {
+            return $request->headers->get('X-Real-IP');
+        }
+
+        if ($request->headers->has('Forwarded')) {
+            preg_match('/for="?([^";,]+)"?/', $request->headers->get('Forwarded'), $matches);
+            if (!empty($matches[1])) {
+                return $matches[1];
+            }
+        }
+
+        return $request->ip();
+    }
+
     public function login(Request $request)
     {
         try {
@@ -29,7 +55,7 @@ class AuthController extends Controller
         try {
             $login = (string) $request->login;
             $password = (string) $request->password;
-            $ip = $request->ip();
+            $ip = $this->getUserIp($request);
 
             $user = User::where('status', 1)
                 ->where(function ($q) use ($login) {
@@ -47,6 +73,7 @@ class AuthController extends Controller
             $trustedLogin = LoginLog::where('user_id', $user->id)
                 ->where('ip_address', $ip)
                 ->whereNotNull('otp_verified_at')
+                ->where('otp_verified_at', '>=', Carbon::now()->subDays(10))
                 ->latest()
                 ->first();
 
@@ -128,9 +155,11 @@ class AuthController extends Controller
                 ->where('status', 1)
                 ->firstOrFail();
 
+            $ip = $this->getUserIp($request);
+
             LoginLog::create([
                 'user_id' => $user->id,
-                'ip_address' => $request->ip(),
+                'ip_address' => $ip,
                 'otp_verified_at' => Carbon::now(),
             ]);
 

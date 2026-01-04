@@ -97,7 +97,7 @@ class ProcurementController extends Controller
                     'plenaryMeetingItem.item',
                     'plenaryMeetingItem.cooperative',
                     'vendor',
-                ])->limit(1);
+                ]);
             },
         ])->where('id', $id)->first();
 
@@ -152,9 +152,9 @@ class ProcurementController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        try {
-            DB::beginTransaction();
+        DB::beginTransaction();
 
+        try {
             $annualBudget = AnnualBudget::firstOrCreate(
                 ['budget_year' => Carbon::now()->year],
                 ['total_budget' => 0, 'used_budget' => 0, 'remaining_budget' => 0]
@@ -169,14 +169,32 @@ class ProcurementController extends Controller
                 'annual_budget_id' => $annualBudget->id,
             ]);
 
-            foreach ($request->items as $item) {
-                $meetingItem = PlenaryMeetingItem::findOrFail($item['plenary_meeting_item_id']);
+            $itemErrors = [];
+
+            foreach ($request->items as $index => $item) {
+                $meetingItem = PlenaryMeetingItem::find($item['plenary_meeting_item_id']);
+
+                if (!$meetingItem) {
+                    $itemErrors["items.$index.plenary_meeting_item_id"][] =
+                        'Invalid plenary meeting item.';
+                    continue;
+                }
 
                 if (!$meetingItem->package_quantity || !$meetingItem->unit_price) {
-                    return ApiResponse::error(
-                        'Package quantity or unit price not defined for plenary meeting item ID '.$meetingItem->id,
-                        422
-                    );
+                    $itemErrors["items.$index.plenary_meeting_item_id"][] =
+                        'Package quantity or unit price is not defined.';
+                    continue;
+                }
+
+                $exists = ProcurementItem::where(
+                    'plenary_meeting_item_id',
+                    $item['plenary_meeting_item_id']
+                )->exists();
+
+                if ($exists) {
+                    $itemErrors["items.$index.plenary_meeting_item_id"][] =
+                        'This item already exists in another submission.';
+                    continue;
                 }
 
                 $quantity = $meetingItem->package_quantity;
@@ -216,18 +234,27 @@ class ProcurementController extends Controller
                 ]);
             }
 
+            if (!empty($itemErrors)) {
+                DB::rollBack();
+
+                return ApiResponse::validationError($itemErrors);
+            }
+
             $this->recalcBudget($procurement);
 
             DB::commit();
 
             return ApiResponse::success(
-                'Procurement created',
+                'Procurement created successfully',
                 $procurement->load('items')
             );
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to create procurement: '.$e->getMessage(), 500);
+            return ApiResponse::error(
+                'Failed to create procurement: '.$e->getMessage(),
+                500
+            );
         }
     }
 

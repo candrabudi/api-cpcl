@@ -46,8 +46,8 @@ class AuthController extends Controller
 
             $trustedLogin = LoginLog::where('user_id', $user->id)
                 ->where('ip_address', $ip)
-                ->whereNotNull('otp_verified_at')
-                ->where('otp_verified_at', '>=', Carbon::now()->subDays(3))
+                ->whereNotNull('verified_at')
+                ->where('verified_at', '>=', Carbon::now()->subDays(30))
                 ->latest()
                 ->first();
 
@@ -55,7 +55,7 @@ class AuthController extends Controller
                 LoginLog::create([
                     'user_id' => $user->id,
                     'ip_address' => $ip,
-                    'otp_verified_at' => $trustedLogin->otp_verified_at,
+                    'verified_at' => $trustedLogin->verified_at,
                 ]);
 
                 $token = JWTAuth::fromUser($user);
@@ -132,7 +132,7 @@ class AuthController extends Controller
             LoginLog::create([
                 'user_id' => $user->id,
                 'ip_address' => $request->ip(),
-                'otp_verified_at' => Carbon::now(),
+                'verified_at' => Carbon::now(),
             ]);
 
             $token = JWTAuth::fromUser($user);

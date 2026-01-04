@@ -60,6 +60,8 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'CooperativeController@store');
                 $router->put('{id}/update', 'CooperativeController@update');
                 $router->delete('{id}/delete', 'CooperativeController@destroy');
+
+                $router->get('{cooperativeID}/procurements', 'CooperativeController@getCooperativeProcurements');
             });
 
             $router->group(['prefix' => 'cpcl-answers'], function () use ($router) {

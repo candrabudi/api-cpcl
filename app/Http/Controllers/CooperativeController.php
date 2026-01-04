@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Models\Area;
 use App\Models\Cooperative;
+use App\Models\ProcurementItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -57,6 +58,56 @@ class CooperativeController extends Controller
         }
 
         return ApiResponse::success('Cooperative detail', $cooperative);
+    }
+
+    public function getCooperativeProcurements(Request $request, $cooperativeID)
+    {
+        $cooperative = Cooperative::findOrFail($cooperativeID);
+
+        $items = ProcurementItem::with('procurement', 'plenaryMeetingItem')
+            ->whereHas('plenaryMeetingItem', function ($q) use ($cooperativeID) {
+                $q->where('cooperative_id', $cooperativeID);
+            })
+            ->get();
+
+        if ($items->isEmpty()) {
+            return ApiResponse::error('No procurements found for this cooperative', 404);
+        }
+
+        $procurements = $items->groupBy('procurement_id')->map(function ($group) {
+            $procurement = $group->first()->procurement;
+            $procurementTotal = $group->sum('total_price');
+
+            return [
+                'procurement_id' => $procurement->id,
+                'procurement_number' => $procurement->procurement_number,
+                'procurement_date' => $procurement->procurement_date,
+                'total_spent' => $procurementTotal,
+            ];
+        })->values();
+
+        return ApiResponse::success('Cooperative procurements retrieved', [
+            'cooperative' => [
+                'id' => $cooperative->id,
+                'name' => $cooperative->name,
+                'registration_number' => $cooperative->registration_number,
+                'kusuka_id_number' => $cooperative->kusuka_id_number,
+                'established_year' => $cooperative->established_year,
+                'street_address' => $cooperative->street_address,
+                'village' => $cooperative->village,
+                'district' => $cooperative->district,
+                'regency' => $cooperative->regency,
+                'province' => $cooperative->province,
+                'phone_number' => $cooperative->phone_number,
+                'email' => $cooperative->email,
+                'member_count' => $cooperative->member_count,
+                'chairman_name' => $cooperative->chairman_name,
+                'secretary_name' => $cooperative->secretary_name,
+                'treasurer_name' => $cooperative->treasurer_name,
+                'chairman_phone_number' => $cooperative->chairman_phone_number,
+            ],
+            'procurements' => $procurements,
+        ]);
     }
 
     public function store(Request $request)

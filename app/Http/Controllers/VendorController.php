@@ -27,7 +27,7 @@ class VendorController extends Controller
     {
         $perPage = (int) $request->get('per_page', 10);
 
-        $query = Vendor::with('user', 'area')->orderByDesc('id');
+        $query = Vendor::with(['user', 'area', 'documents.documentType'])->orderByDesc('id');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -45,6 +45,20 @@ class VendorController extends Controller
 
         $data = $query->paginate($perPage);
 
+        // Sertakan dokumen di response
+        $data->getCollection()->transform(function ($vendor) {
+            $vendor->documents = $vendor->documents->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'document_type' => $doc->documentType->name ?? null,
+                    'file_path' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
+                    'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
+                ];
+            });
+
+            return $vendor;
+        });
+
         return ApiResponse::success('Vendors retrieved', $data);
     }
 
@@ -54,7 +68,7 @@ class VendorController extends Controller
             return ApiResponse::error('Invalid vendor id', 400);
         }
 
-        $vendor = Vendor::with('user', 'area')->find($id);
+        $vendor = Vendor::with(['user', 'area', 'documents.documentType'])->find($id);
 
         if (!$vendor) {
             return ApiResponse::error('Vendor not found', 400);
@@ -62,12 +76,27 @@ class VendorController extends Controller
 
         $this->recalcVendorTotals($vendor);
 
+        // Sertakan dokumen di response
+        $vendor->documents = $vendor->documents->map(function ($doc) {
+            return [
+                'id' => $doc->id,
+                'document_type' => $doc->documentType->name ?? null,
+                'file_path' => $doc->file_path,
+                'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
+            ];
+        });
+
         return ApiResponse::success('Vendor detail', $vendor);
     }
 
     public function showWithProcurements(Request $request, $vendorID)
     {
-        $vendor = Vendor::where('id', $vendorID)->first();
+        $vendor = Vendor::with(['documents.documentType'])->where('id', $vendorID)->first();
+
+        if (!$vendor) {
+            return ApiResponse::error('Vendor not found', 404);
+        }
+
         $vendorId = $vendorID;
 
         $itemsQuery = ProcurementItem::with('procurement')
@@ -98,6 +127,16 @@ class VendorController extends Controller
             ];
         })->values();
 
+        // Sertakan dokumen vendor
+        $vendorDocuments = $vendor->documents->map(function ($doc) {
+            return [
+                'id' => $doc->id,
+                'document_type' => $doc->documentType->name ?? null,
+                'file_path' => $doc->file_path,
+                'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
+            ];
+        });
+
         return ApiResponse::success('Vendor procurement summary retrieved', [
             'vendor' => [
                 'id' => $vendor->id,
@@ -108,6 +147,7 @@ class VendorController extends Controller
                 'email' => $vendor->email,
                 'address' => $vendor->address,
                 'total_paid' => $totalPaid,
+                'documents' => $vendorDocuments,
             ],
             'procurements' => $procurements,
         ]);

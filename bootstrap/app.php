@@ -50,6 +50,7 @@ $app->register(Flipbox\LumenGenerator\LumenGeneratorServiceProvider::class);
 
 $app->routeMiddleware([
     'auth' => App\Http\Middleware\Authenticate::class,
+    'admin' => App\Http\Middleware\AdminMiddleware::class,
 ]);
 $app->middleware([
     App\Http\Middleware\CorsMiddleware::class,

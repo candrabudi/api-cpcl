@@ -25,10 +25,13 @@ class SendLoginOtpEmail implements ShouldQueue
 
     public function handle(): void
     {
-        GmailMailer::send(
+        GmailMailer::sendView(
             $this->email,
             'OTP Login',
-            "Kode OTP Login kamu: {$this->otp}\nBerlaku 5 menit."
+            'emails.otp',
+            [
+                'otp' => $this->otp,
+            ]
         );
     }
 }

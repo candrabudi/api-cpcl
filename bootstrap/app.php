@@ -47,6 +47,11 @@ $app->register(Illuminate\Auth\AuthServiceProvider::class);
 $app->register(Illuminate\Cache\CacheServiceProvider::class);
 $app->register(Illuminate\Redis\RedisServiceProvider::class);
 $app->register(Tymon\JWTAuth\Providers\LumenServiceProvider::class);
+$app->register(Flipbox\LumenGenerator\LumenGeneratorServiceProvider::class);
+
+$app->configure('view');
+$app->register(Illuminate\View\ViewServiceProvider::class);
+
 $app->register(Illuminate\Filesystem\FilesystemServiceProvider::class);
 $app->routeMiddleware([
     'auth' => App\Http\Middleware\Authenticate::class,

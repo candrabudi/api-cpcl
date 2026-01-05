@@ -29,6 +29,16 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         });
 
         $router->group(['middleware' => ['auth', 'admin']], function () use ($router) {
+            $router->group(['prefix' => 'admin-users'], function () use ($router) {
+                $router->get('/', 'AdminUserController@index');
+                $router->get('/{id}/show', 'AdminUserController@show');
+                $router->post('/store', 'AdminUserController@store');
+                $router->put('/{id}/update', 'AdminUserController@update');
+                $router->delete('/{id}/delete', 'AdminUserController@destroy');
+
+                $router->put('/{id}/lock', 'AdminUserController@lock');
+                $router->put('/{id}/unlock', 'AdminUserController@unlock');
+            });
             $router->group(['prefix' => 'group-fields'], function () use ($router) {
                 $router->get('/', 'GroupFieldController@index');
                 $router->get('{id}/show', 'GroupFieldController@show');

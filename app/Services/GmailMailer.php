@@ -6,11 +6,13 @@ use Illuminate\Support\Facades\Mail;
 
 class GmailMailer
 {
-    public static function send(string $to, string $subject, string $message): void
+    public static function sendView(string $to, string $subject, string $view, array $data = []): void
     {
-        Mail::raw($message, function ($mail) use ($to, $subject) {
+        $data['subject'] = $subject;
+
+        Mail::send($view, $data, function ($mail) use ($to, $subject) {
             $mail->to($to)
-                ->subject($subject);
+                 ->subject($subject);
         });
     }
 }

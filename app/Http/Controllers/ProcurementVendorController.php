@@ -13,22 +13,18 @@ use Illuminate\Support\Facades\Validator;
 
 class ProcurementVendorController extends Controller
 {
-    /**
-     * List vendor procurement items with pagination, search, and eager loaded relations.
-     */
     public function index(Request $request)
     {
         $vendorId = $request->user()->vendor->id;
 
         $query = ProcurementItem::with([
             'procurement',
-            'plenaryMeetingItem.item',       // item details
-            'plenaryMeetingItem.cooperative', // cooperative info
+            'plenaryMeetingItem.item',
+            'plenaryMeetingItem.cooperative',
             'deliveryLogs',
             'processLogs',
         ])->where('vendor_id', $vendorId);
 
-        // Apply search by procurement number, item name, delivery/process status, or item ID
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -107,9 +103,6 @@ class ProcurementVendorController extends Controller
         }
     }
 
-    /**
-     * Update process status.
-     */
     public function updateProcessStatus(Request $request, $id)
     {
         $vendorId = $request->user()->vendor->id;

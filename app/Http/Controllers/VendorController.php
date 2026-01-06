@@ -45,7 +45,6 @@ class VendorController extends Controller
 
         $data = $query->paginate($perPage);
 
-        // Sertakan dokumen di response
         $data->getCollection()->transform(function ($vendor) {
             $vendor->documents = $vendor->documents->map(function ($doc) {
                 return [

@@ -156,7 +156,15 @@ class ItemController extends Controller
             });
         }
 
-        return ApiResponse::success('Items retrieved', $query->paginate($perPage));
+        $items = $query->paginate($perPage);
+
+        $items->getCollection()->transform(function ($item) {
+            $item->type_name = $item->type?->name;
+
+            return $item;
+        });
+
+        return ApiResponse::success('Items retrieved', $items);
     }
 
     public function show(Request $request, $id)

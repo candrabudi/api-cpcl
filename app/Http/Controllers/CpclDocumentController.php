@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Models\CpclDocument;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -31,6 +32,7 @@ class CpclDocumentController extends Controller
                     'version',
                     'created_at'
                 )
+                    ->where('prepared_by', Auth::user()->id)
                     ->orderByDesc('id')
                     ->paginate($perPage);
             });
@@ -88,7 +90,7 @@ class CpclDocumentController extends Controller
                 'status' => 'draft',
                 'pleno_result' => 'pending',
                 'version' => 1,
-                'prepared_by' => $request->prepared_by,
+                'prepared_by' => $request->prepared_by ?? Auth::user()->id,
             ]);
 
             Cache::forget('cpcl_documents_list');

@@ -134,6 +134,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'ItemController@store');
                 $router->put('/{id}/update', 'ItemController@update');
                 $router->delete('/{id}/delete', 'ItemController@destroy');
+                $router->get('types', 'ItemController@types');
             });
         });
 

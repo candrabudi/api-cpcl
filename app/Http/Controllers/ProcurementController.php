@@ -12,6 +12,7 @@ use App\Models\ProcurementItemProcessStatus;
 use App\Models\ProcurementItemStatusLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -167,6 +168,7 @@ class ProcurementController extends Controller
                 'notes' => $request->notes,
                 'status' => 'draft',
                 'annual_budget_id' => $annualBudget->id,
+                'created_by' => Auth::user()->id,
             ]);
 
             $itemErrors = [];
@@ -210,6 +212,7 @@ class ProcurementController extends Controller
                     'total_price' => $totalPrice,
                     'delivery_status' => 'pending',
                     'process_status' => 'pending',
+                    'created_by' => Auth::user()->id,
                 ]);
 
                 AnnualBudgetTransaction::create([

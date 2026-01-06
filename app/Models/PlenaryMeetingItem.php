@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class PlenaryMeetingItem extends Model
 {
@@ -72,5 +73,67 @@ class PlenaryMeetingItem extends Model
             'plenary_meeting_id',
             'id'
         );
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($item) {
+            if (Auth::check()) {
+                $item->created_by = Auth::id();
+            }
+        });
+
+        static::created(function ($item) {
+            if (Auth::check()) {
+                PlenaryMeetingItemLog::create([
+                    'plenary_meeting_item_id' => $item->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'created',
+                    'changes' => $item->getAttributes(),
+                ]);
+            }
+        });
+
+        static::updating(function ($item) {
+            if (Auth::check()) {
+                $changes = [];
+                foreach ($item->getDirty() as $field => $newValue) {
+                    $changes[$field] = [
+                        'old' => $item->getOriginal($field),
+                        'new' => $newValue,
+                    ];
+                }
+
+                if (!empty($changes)) {
+                    PlenaryMeetingItemLog::create([
+                        'plenary_meeting_item_id' => $item->id,
+                        'user_id' => Auth::id(),
+                        'action' => 'updated',
+                        'changes' => $changes,
+                    ]);
+                }
+            }
+        });
+
+        static::deleted(function ($item) {
+            if (Auth::check()) {
+                PlenaryMeetingItemLog::create([
+                    'plenary_meeting_item_id' => $item->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'deleted',
+                    'changes' => $item->getAttributes(),
+                ]);
+            }
+        });
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(PlenaryMeetingItemLog::class, 'plenary_meeting_item_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

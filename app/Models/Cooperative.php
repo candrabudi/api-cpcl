@@ -11,6 +11,7 @@ class Cooperative extends Model
 
     protected $fillable = [
         'name',
+        'area_id'
         'registration_number',
         'kusuka_id_number',
         'established_year',

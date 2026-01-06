@@ -11,7 +11,7 @@ class Cooperative extends Model
 
     protected $fillable = [
         'name',
-        'area_id'
+        'area_id',
         'registration_number',
         'kusuka_id_number',
         'established_year',
@@ -26,6 +26,7 @@ class Cooperative extends Model
         'secretary_name',
         'treasurer_name',
         'chairman_phone_number',
+        'member_count',
     ];
 
     protected $casts = [

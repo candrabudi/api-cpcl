@@ -39,7 +39,7 @@ class CooperativeController extends Controller
 
             $data = $query->paginate($perPage);
         } catch (\Throwable $e) {
-            return ApiResponse::error('Failed to retrieve cooperatives', 500);
+            return ApiResponse::error('Failed to retrieve cooperatives: ' . $e->getMessage(), 500);
         }
 
         return ApiResponse::success('Cooperatives retrieved', $data);

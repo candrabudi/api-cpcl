@@ -12,7 +12,8 @@ class DocumentTypeController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = DocumentType::query();
+            $perPage = (int) $request->get('per_page', 15);
+            $query = DocumentType::query()->orderBy('name');
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -20,7 +21,7 @@ class DocumentTypeController extends Controller
                       ->orWhere('description', 'like', "%{$search}%");
             }
 
-            $data = $query->orderBy('name')->get();
+            $data = $query->paginate($perPage);
         } catch (\Throwable $e) {
             return ApiResponse::error('Failed to retrieve document types: ' . $e->getMessage(), 500);
         }

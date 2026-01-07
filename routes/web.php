@@ -137,6 +137,14 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->get('types', 'ItemController@types');
             });
 
+            $router->group(['prefix' => 'item-types'], function () use ($router) {
+                $router->get('/', 'ItemTypeController@index');
+                $router->get('/{id}/show', 'ItemTypeController@show');
+                $router->post('/store', 'ItemTypeController@store');
+                $router->put('/{id}/update', 'ItemTypeController@update');
+                $router->delete('/{id}/delete', 'ItemTypeController@destroy');
+            });
+
             $router->group(['prefix' => 'document-types'], function () use ($router) {
                 $router->get('/', 'DocumentTypeController@index');
                 $router->get('/{id}/show', 'DocumentTypeController@show');

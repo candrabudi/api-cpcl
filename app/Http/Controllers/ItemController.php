@@ -216,7 +216,15 @@ class ItemController extends Controller
             return $adminCheck;
         }
 
-        $types = ItemType::orderBy('name')->get(['id', 'name']);
+        $perPage = (int) $request->get('per_page', 15);
+        $query = ItemType::query()->orderBy('name');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $types = $query->paginate($perPage);
 
         return ApiResponse::success('Item types retrieved', $types);
     }

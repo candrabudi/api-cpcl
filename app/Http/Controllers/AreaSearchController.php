@@ -39,6 +39,7 @@ class AreaSearchController extends Controller
 
         $data = $areas->map(function ($row) {
             return [
+                'id' => $row->id,
                 'province' => $row->province_name,
                 'city' => $row->city_name,
                 'district' => $row->district_name,

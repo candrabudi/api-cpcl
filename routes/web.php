@@ -136,6 +136,14 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->delete('/{id}/delete', 'ItemController@destroy');
                 $router->get('types', 'ItemController@types');
             });
+
+            $router->group(['prefix' => 'document-types'], function () use ($router) {
+                $router->get('/', 'DocumentTypeController@index');
+                $router->get('/{id}/show', 'DocumentTypeController@show');
+                $router->post('/store', 'DocumentTypeController@store');
+                $router->put('/{id}/update', 'DocumentTypeController@update');
+                $router->delete('/{id}/delete', 'DocumentTypeController@destroy');
+            });
         });
 
         $router->group(['prefix' => 'vendor'], function () use ($router) {

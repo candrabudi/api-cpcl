@@ -82,6 +82,7 @@ class AuthController extends Controller
                     'user_id' => $user->id,
                     'ip_address' => $ip,
                     'otp_verified_at' => $trustedLogin->otp_verified_at,
+                    'login_at' => Carbon::now(),
                 ]);
 
                 $token = JWTAuth::fromUser($user);

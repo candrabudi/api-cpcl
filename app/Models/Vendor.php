@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Vendor extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'area_id',
         'user_id',
@@ -16,6 +18,8 @@ class Vendor extends Model
         'phone',
         'email',
         'address',
+        'latitude',
+        'longitude',
         'total_paid',
     ];
 
@@ -26,12 +30,18 @@ class Vendor extends Model
 
     public function area()
     {
-        return $this->hasOne(Area::class, 'id', 'area_id');
+        return $this->belongsTo(Area::class);
     }
 
-    public function procurementItems()
+    public function procurements()
     {
-        return $this->hasMany(ProcurementItem::class);
+        return $this->hasMany(Procurement::class);
+    }
+
+
+    public function logs()
+    {
+        return $this->hasMany(VendorLog::class);
     }
 
     public function documents()
@@ -83,10 +93,5 @@ class Vendor extends Model
                 ]);
             }
         });
-    }
-
-    public function logs()
-    {
-        return $this->hasMany(VendorLog::class);
     }
 }

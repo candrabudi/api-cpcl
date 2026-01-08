@@ -6,18 +6,20 @@ use App\Helpers\ApiResponse;
 use App\Models\ProcurementItem;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\VendorDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class VendorController extends Controller
 {
     private function recalcVendorTotals(Vendor $vendor)
     {
-        $totalPaid = ProcurementItem::where('vendor_id', $vendor->id)
-            ->sum('total_price');
+        // Get total paid through procurement relationship
+        $totalPaid = ProcurementItem::whereHas('procurement', function ($query) use ($vendor) {
+            $query->where('vendor_id', $vendor->id);
+        })->sum('total_price');
 
         $vendor->total_paid = $totalPaid;
         $vendor->save();
@@ -28,6 +30,13 @@ class VendorController extends Controller
         $perPage = (int) $request->get('per_page', 10);
 
         $query = Vendor::with(['user', 'area', 'documents.documentType'])->orderByDesc('id');
+
+        // Archive Filter
+        if ($request->get('filter') === 'archived') {
+            $query->onlyTrashed();
+        } elseif ($request->get('show_archived') === 'true') {
+            $query->withTrashed();
+        }
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -45,19 +54,6 @@ class VendorController extends Controller
 
         $data = $query->paginate($perPage);
 
-        $data->getCollection()->transform(function ($vendor) {
-            $vendor->documents = $vendor->documents->map(function ($doc) {
-                return [
-                    'id' => $doc->id,
-                    'document_type' => $doc->documentType->name ?? null,
-                    'file_path' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
-                    'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
-                ];
-            });
-
-            return $vendor;
-        });
-
         return ApiResponse::success('Vendors retrieved', $data);
     }
 
@@ -67,7 +63,7 @@ class VendorController extends Controller
             return ApiResponse::error('Invalid vendor id', 400);
         }
 
-        $vendor = Vendor::with(['user', 'area', 'documents.documentType'])->find($id);
+        $vendor = Vendor::withTrashed()->with(['user', 'area', 'documents.documentType'])->find($id);
 
         if (!$vendor) {
             return ApiResponse::error('Vendor not found', 400);
@@ -75,22 +71,12 @@ class VendorController extends Controller
 
         $this->recalcVendorTotals($vendor);
 
-        // Sertakan dokumen di response
-        $vendor->documents = $vendor->documents->map(function ($doc) {
-            return [
-                'id' => $doc->id,
-                'document_type' => $doc->documentType->name ?? null,
-                'file_path' => $doc->file_path,
-                'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
-            ];
-        });
-
         return ApiResponse::success('Vendor detail', $vendor);
     }
 
     public function showWithProcurements(Request $request, $vendorID)
     {
-        $vendor = Vendor::with(['documents.documentType'])->where('id', $vendorID)->first();
+        $vendor = Vendor::where('id', $vendorID)->first();
 
         if (!$vendor) {
             return ApiResponse::error('Vendor not found', 404);
@@ -126,16 +112,6 @@ class VendorController extends Controller
             ];
         })->values();
 
-        // Sertakan dokumen vendor
-        $vendorDocuments = $vendor->documents->map(function ($doc) {
-            return [
-                'id' => $doc->id,
-                'document_type' => $doc->documentType->name ?? null,
-                'file_path' => $doc->file_path,
-                'url' => $doc->file_path ? request()->getSchemeAndHttpHost().'/storage/'.$doc->file_path : null,
-            ];
-        });
-
         return ApiResponse::success('Vendor procurement summary retrieved', [
             'vendor' => [
                 'id' => $vendor->id,
@@ -145,8 +121,9 @@ class VendorController extends Controller
                 'phone' => $vendor->phone,
                 'email' => $vendor->email,
                 'address' => $vendor->address,
+                'latitude' => $vendor->latitude,
+                'longitude' => $vendor->longitude,
                 'total_paid' => $totalPaid,
-                'documents' => $vendorDocuments,
             ],
             'procurements' => $procurements,
         ]);
@@ -229,9 +206,11 @@ class VendorController extends Controller
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:100',
             'address' => 'nullable|string',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'documents' => 'nullable|array',
-            'documents.*.document_type_id' => 'required_with:documents|exists:document_types,id',
-            'documents.*.file' => 'required_with:documents|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'documents.*.document_type_id' => 'required|exists:document_types,id',
+            'documents.*.file' => 'required|file|max:5120', // Max 5MB
+            'documents.*.notes' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -241,6 +220,7 @@ class VendorController extends Controller
         try {
             DB::beginTransaction();
 
+            // Create User first
             $baseUsername = strtolower(preg_replace('/\s+/', '_', $request->name));
             $username = $baseUsername;
             $count = 1;
@@ -249,8 +229,13 @@ class VendorController extends Controller
                 ++$count;
             }
 
-            $email = $request->email ?? $baseUsername.'@example.com';
+            $email = $request->email ?? ($baseUsername . '@example.com');
             $defaultPassword = 'Vendor1234!';
+
+            // Check if email already exists in User table
+            if (User::where('email', $email)->exists()) {
+                return ApiResponse::validationError(['email' => ['Email already exists.']]);
+            }
 
             $user = User::create([
                 'username' => $username,
@@ -264,28 +249,32 @@ class VendorController extends Controller
                 'user_id' => $user->id,
                 'area_id' => $request->area_id,
                 'name' => $request->name,
-                'npwp' => $request->npwp ?? null,
-                'contact_person' => $request->contact_person ?? null,
-                'phone' => $request->phone ?? null,
+                'npwp' => $request->npwp,
+                'contact_person' => $request->contact_person,
+                'phone' => $request->phone,
                 'email' => $email,
-                'address' => $request->address ?? null,
+                'address' => $request->address,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'total_paid' => 0,
             ]);
 
-            // Simpan dokumen jika ada
-            if ($request->has('documents')) {
-                foreach ($request->documents as $doc) {
-                    if (isset($doc['file'])) {
-                        // Lumen + Flysystem v2 compatible
-                        $path = Storage::disk('public')->putFile('vendor_docs', $doc['file']);
-                        $vendor->documents()->create([
-                            'document_type_id' => $doc['document_type_id'],
-                            'file_path' => $path,
-                        ]);
-                    }
+            // Handle Documents
+            if ($request->hasFile('documents')) {
+                foreach ($request->file('documents') as $docData) {
+                    $file = $docData['file'];
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $path = 'uploads/vendor_docs/' . $vendor->id;
+                    $file->move(base_path('public/' . $path), $filename);
+
+                    VendorDocument::create([
+                        'vendor_id' => $vendor->id,
+                        'document_type_id' => $docData['document_type_id'],
+                        'file_path' => $path . '/' . $filename,
+                        'notes' => $docData['notes'] ?? null,
+                    ]);
                 }
             }
-
-            $this->recalcVendorTotals($vendor);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -307,44 +296,25 @@ class VendorController extends Controller
             return ApiResponse::error('Invalid vendor id', 400);
         }
 
-        $vendor = Vendor::with('user', 'documents')->find($id);
+        $vendor = Vendor::with('user')->find($id);
         if (!$vendor) {
             return ApiResponse::error('Vendor not found', 400);
-        }
-
-        // Cek duplicate npwp (di luar vendor ini)
-        if ($request->filled('npwp')) {
-            $existsNpwp = Vendor::where('npwp', $request->npwp)
-                ->where('id', '!=', $id)
-                ->exists();
-            if ($existsNpwp) {
-                return ApiResponse::validationError([
-                    'npwp' => ['NPWP sudah digunakan oleh vendor lain.'],
-                ]);
-            }
-        }
-
-        // Cek duplicate email di user (di luar user ini)
-        if ($request->filled('email')) {
-            $existsEmail = User::where('email', $request->email)
-                ->where('id', '!=', $vendor->user_id)
-                ->exists();
-            if ($existsEmail) {
-                return ApiResponse::validationError([
-                    'email' => ['Email sudah digunakan oleh user lain.'],
-                ]);
-            }
         }
 
         $validator = Validator::make($request->all(), [
             'area_id' => 'required|exists:areas,id',
             'name' => 'required|string|max:255',
+            'npwp' => 'nullable|string|unique:vendors,npwp,' . $id,
+            'email' => 'nullable|email|max:100|unique:users,email,' . $vendor->user_id,
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'documents' => 'nullable|array',
-            'documents.*.document_type_id' => 'required_with:documents|exists:document_types,id',
-            'documents.*.file' => 'required_with:documents|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'documents.*.document_type_id' => 'required|exists:document_types,id',
+            'documents.*.file' => 'required|file|max:5120',
+            'documents.*.notes' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -354,35 +324,44 @@ class VendorController extends Controller
         try {
             DB::beginTransaction();
 
-            // Update user email
-            $vendor->user->update([
-                'email' => $request->email ?? $vendor->user->email,
-            ]);
+            $newEmail = $request->email ?? $vendor->email;
+
+            // Update user email if changed
+            if ($newEmail !== $vendor->user->email) {
+                $vendor->user->update([
+                    'email' => $newEmail,
+                ]);
+            }
 
             // Update vendor data
             $vendor->update([
                 'area_id' => $request->area_id,
                 'name' => $request->name,
-                'npwp' => $request->npwp ?? null,
-                'contact_person' => $request->contact_person ?? null,
-                'phone' => $request->phone ?? null,
-                'email' => $request->email ?? $vendor->email,
-                'address' => $request->address ?? null,
+                'npwp' => $request->npwp,
+                'contact_person' => $request->contact_person,
+                'phone' => $request->phone,
+                'email' => $newEmail,
+                'address' => $request->address,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
             ]);
 
-            if ($request->has('documents')) {
-                foreach ($request->documents as $doc) {
-                    if (isset($doc['file'])) {
-                        $path = Storage::disk('public')->putFile('vendor_docs', $doc['file']);
-                        $vendor->documents()->create([
-                            'document_type_id' => $doc['document_type_id'],
-                            'file_path' => $path,
-                        ]);
-                    }
+            // Handle New Documents
+            if ($request->hasFile('documents')) {
+                foreach ($request->file('documents') as $docData) {
+                    $file = $docData['file'];
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $path = 'uploads/vendor_docs/' . $vendor->id;
+                    $file->move(base_path('public/' . $path), $filename);
+
+                    VendorDocument::create([
+                        'vendor_id' => $vendor->id,
+                        'document_type_id' => $docData['document_type_id'],
+                        'file_path' => $path . '/' . $filename,
+                        'notes' => $docData['notes'] ?? null,
+                    ]);
                 }
             }
-
-            $this->recalcVendorTotals($vendor);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -391,7 +370,38 @@ class VendorController extends Controller
             return ApiResponse::error('Failed to update vendor: '.$e->getMessage(), 500);
         }
 
-        return ApiResponse::success('Vendor updated');
+        return ApiResponse::success('Vendor updated', $vendor->fresh(['user', 'area']));
+    }
+
+    public function restore($id)
+    {
+        if (!is_numeric($id)) {
+            return ApiResponse::error('Invalid vendor id', 400);
+        }
+
+        $vendor = Vendor::onlyTrashed()->find($id);
+        if (!$vendor) {
+            return ApiResponse::error('Archived vendor not found', 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $vendor->restore();
+            
+            // Also restore the user if it was deleted
+            $user = User::withTrashed()->find($vendor->user_id);
+            if ($user && $user->trashed()) {
+                $user->restore();
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return ApiResponse::error('Failed to restore vendor', 500);
+        }
+
+        return ApiResponse::success('Vendor restored');
     }
 
     public function destroy($id)

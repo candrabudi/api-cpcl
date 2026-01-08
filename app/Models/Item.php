@@ -3,47 +3,44 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Item extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'name',
-        'type',
         'item_type_id',
-        'code',
-        'brand',
-        'model',
-        'specification',
-        'unit',
-        'weight',
-        'length',
-        'width',
-        'height',
         'description',
+        'unit',
+        'created_by',
     ];
+
+    public function type()
+    {
+        return $this->belongsTo(ItemType::class, 'item_type_id');
+    }
 
     public function plenaryMeetingItems()
     {
         return $this->hasMany(PlenaryMeetingItem::class);
     }
 
-    public function procurementItems()
+    public function creator()
     {
-        return $this->hasManyThrough(
-            ProcurementItem::class,
-            PlenaryMeetingItem::class,
-            'item_id',
-            'plenary_meeting_item_id',
-            'id',
-            'id'
-        );
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(ItemLog::class);
     }
 
     protected static function booted()
     {
         static::creating(function ($item) {
-            if (Auth::check()) {
+            if (Auth::check() && !$item->created_by) {
                 $item->created_by = Auth::id();
             }
         });
@@ -90,20 +87,5 @@ class Item extends Model
                 ]);
             }
         });
-    }
-
-    public function logs()
-    {
-        return $this->hasMany(ItemLog::class);
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function type()
-    {
-        return $this->belongsTo(ItemType::class, 'item_type_id');
     }
 }

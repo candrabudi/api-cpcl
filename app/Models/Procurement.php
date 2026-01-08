@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Procurement extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
-        'plenary_meeting_id',
+        'vendor_id',
         'procurement_number',
         'procurement_date',
         'status',
         'notes',
+        'annual_budget_id',
+        'created_by',
     ];
 
     public function items()
@@ -20,32 +24,30 @@ class Procurement extends Model
         return $this->hasMany(ProcurementItem::class);
     }
 
-    public function plenaryMeeting()
+    public function vendor()
     {
-        return $this->belongsTo(PlenaryMeeting::class);
+        return $this->belongsTo(Vendor::class);
     }
 
-    public function processStatuses()
+    public function annualBudget()
     {
-        return $this->hasOne(ProcurementItemProcessStatus::class, 'id', 'procurement_id');
+        return $this->belongsTo(AnnualBudget::class);
     }
 
-    public function ProcurementItem()
+    public function creator()
     {
-        return $this->hasOne(ProcurementItem::class, 'id', 'procurement_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function itemsOne()
+    public function logs()
     {
-        return $this->hasMany(ProcurementItem::class)
-                    ->with(['plenaryMeetingItem', 'plenaryMeetingItem.item'])
-                    ->limit(1);
+        return $this->hasMany(ProcurementLog::class);
     }
 
     protected static function booted()
     {
         static::creating(function ($procurement) {
-            if (Auth::check()) {
+            if (Auth::check() && !$procurement->created_by) {
                 $procurement->created_by = Auth::id();
             }
         });
@@ -92,15 +94,5 @@ class Procurement extends Model
                 ]);
             }
         });
-    }
-
-    public function logs()
-    {
-        return $this->hasMany(ProcurementLog::class, 'procurement_id');
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

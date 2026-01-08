@@ -15,217 +15,152 @@ class ItemController extends Controller
 {
     private function checkAdmin($user)
     {
-        if ($user->role !== 'admin') {
+        if ($user->role !== 'admin' && $user->role !== 'superadmin') {
             return ApiResponse::error('Unauthorized', 403);
         }
-
         return null;
     }
 
     private function getOrCreateTypeId(string $typeName): int
     {
         $camelName = Str::camel($typeName);
-
         $itemType = ItemType::firstOrCreate(
             ['name' => $camelName],
             ['name' => $camelName]
         );
-
         return $itemType->id;
-    }
-
-    public function store(Request $request)
-    {
-        $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'type' => 'required|string',
-            'code' => 'nullable|string|max:50|unique:items,code',
-            'brand' => 'nullable|string|max:100',
-            'model' => 'nullable|string|max:100',
-            'specification' => 'nullable|string|max:255',
-            'unit' => 'nullable|string|max:50',
-            'weight' => 'nullable|numeric|min:0',
-            'length' => 'nullable|numeric|min:0',
-            'width' => 'nullable|numeric|min:0',
-            'height' => 'nullable|numeric|min:0',
-            'description' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::validationError($validator->errors()->toArray());
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $typeId = $this->getOrCreateTypeId($request->type);
-
-            $item = Item::create(array_merge(
-                $request->except('type'),
-                [
-                    'item_type_id' => $typeId,
-                    'created_by' => Auth::user()->id,
-                ]
-            ));
-
-            DB::commit();
-
-            return ApiResponse::success('Item created', $item->load('type'));
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return ApiResponse::error('Failed to create item: '.$e->getMessage(), 500);
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
-
-        $item = Item::find($id);
-        if (!$item) {
-            return ApiResponse::error('Item not found', 400);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'type' => 'required|string',
-            'code' => 'nullable|string|max:50|unique:items,code,'.$id,
-            'brand' => 'nullable|string|max:100',
-            'model' => 'nullable|string|max:100',
-            'specification' => 'nullable|string|max:255',
-            'unit' => 'nullable|string|max:50',
-            'weight' => 'nullable|numeric|min:0',
-            'length' => 'nullable|numeric|min:0',
-            'width' => 'nullable|numeric|min:0',
-            'height' => 'nullable|numeric|min:0',
-            'description' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::validationError($validator->errors()->toArray());
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $typeId = $this->getOrCreateTypeId($request->type);
-
-            $item->update(array_merge(
-                $request->except('type'),
-                ['item_type_id' => $typeId]
-            ));
-
-            DB::commit();
-
-            return ApiResponse::success('Item updated', $item->load('type'));
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return ApiResponse::error('Failed to update item: '.$e->getMessage(), 500);
-        }
     }
 
     public function index(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
+        if ($adminCheck) return $adminCheck;
 
         $perPage = (int) $request->get('per_page', 15);
-
         $query = Item::with('type')->orderByDesc('id');
 
-        if ($request->filled('search')) {
-            $query->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('code', 'like', "%{$request->search}%");
+        // Archive Filter
+        if ($request->get('filter') === 'archived') {
+            $query->onlyTrashed();
+        } elseif ($request->get('show_archived') === 'true') {
+            $query->withTrashed();
         }
 
-        if ($request->filled('type')) {
-            $query->whereHas('type', function ($q) use ($request) {
-                $q->where('name', Str::camel($request->type));
-            });
+        if ($request->filled('search')) {
+            $query->where('name', 'like', "%{$request->search}%");
+        }
+
+        if ($request->filled('item_type_id')) {
+            $query->where('item_type_id', $request->item_type_id);
         }
 
         $items = $query->paginate($perPage);
-
-        $items->getCollection()->transform(function ($item) {
-            $item->type_name = $item->type?->name;
-
-            return $item;
-        });
-
         return ApiResponse::success('Items retrieved', $items);
     }
 
     public function show(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
+        if ($adminCheck) return $adminCheck;
 
-        $item = Item::with('type')->find($id);
+        $item = Item::withTrashed()->with(['type', 'creator'])->find($id);
         if (!$item) {
-            return ApiResponse::error('Item not found', 400);
+            return ApiResponse::error('Item not found', 404);
         }
 
         return ApiResponse::success('Item detail', $item);
     }
 
-    public function destroy(Request $request, $id)
+    public function store(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
+        if ($adminCheck) return $adminCheck;
 
-        $item = Item::find($id);
-        if (!$item) {
-            return ApiResponse::error('Item not found', 400);
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'item_type_id' => 'required|exists:item_types,id',
+            'description' => 'nullable|string',
+            'unit' => 'nullable|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::validationError($validator->errors()->toArray());
         }
 
         try {
-            DB::beginTransaction();
+            $item = Item::create([
+                'name' => $request->name,
+                'item_type_id' => $request->item_type_id,
+                'description' => $request->description,
+                'unit' => $request->unit,
+                'created_by' => Auth::id(),
+            ]);
 
+            return ApiResponse::success('Item created', $item->load('type'), 201);
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Failed to create item: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) return $adminCheck;
+
+        $item = Item::find($id);
+        if (!$item) {
+            return ApiResponse::error('Item not found', 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'item_type_id' => 'required|exists:item_types,id',
+            'description' => 'nullable|string',
+            'unit' => 'nullable|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::validationError($validator->errors()->toArray());
+        }
+
+        try {
+            $item->update($request->only(['name', 'item_type_id', 'description', 'unit']));
+            return ApiResponse::success('Item updated', $item->load('type'));
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Failed to update item: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $adminCheck = $this->checkAdmin($request->user());
+        if ($adminCheck) return $adminCheck;
+
+        $item = Item::find($id);
+        if (!$item) {
+            return ApiResponse::error('Item not found', 404);
+        }
+
+        try {
             $item->delete();
-
-            DB::commit();
-
             return ApiResponse::success('Item deleted');
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return ApiResponse::error('Failed to delete item: '.$e->getMessage(), 500);
+            return ApiResponse::error('Failed to delete item: ' . $e->getMessage(), 500);
         }
     }
 
     public function types(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
-        if ($adminCheck) {
-            return $adminCheck;
-        }
+        if ($adminCheck) return $adminCheck;
 
         $perPage = (int) $request->get('per_page', 15);
         $query = ItemType::query()->orderBy('name');
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('name', 'like', "%{$search}%");
+            $query->where('name', 'like', "%{$request->search}%");
         }
 
-        $types = $query->paginate($perPage);
-
-        return ApiResponse::success('Item types retrieved', $types);
+        return ApiResponse::success('Item types retrieved', $query->paginate($perPage));
     }
 }

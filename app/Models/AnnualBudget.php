@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AnnualBudget extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'budget_year',
         'total_budget',
@@ -13,15 +15,13 @@ class AnnualBudget extends Model
         'remaining_budget',
     ];
 
-    protected $appends = ['used_budget', 'remaining_budget'];
-
-    public function getUsedBudgetAttribute()
+    public function transactions()
     {
-        return 0;
+        return $this->hasMany(AnnualBudgetTransaction::class);
     }
 
-    public function getRemainingBudgetAttribute()
+    public function procurements()
     {
-        return $this->total_budget - $this->used_budget;
+        return $this->hasMany(Procurement::class);
     }
 }

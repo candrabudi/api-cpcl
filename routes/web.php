@@ -113,8 +113,9 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->get('/', 'VendorController@index');
                 $router->get('/{id}/show', 'VendorController@show');
                 $router->post('/store', 'VendorController@store');
-                $router->post('/{id}/update', 'VendorController@update');
+                $router->put('/{id}/update', 'VendorController@update');
                 $router->delete('/{id}/delete', 'VendorController@destroy');
+                $router->post('/{id}/restore', 'VendorController@restore');
                 $router->get('/procurements/{vendorID}/show', 'VendorController@showWithProcurements');
 
                 $router->get('/procurements/{vendorID}/{procurementID}/items', 'VendorController@getVendorProcurementItems');
@@ -143,6 +144,11 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'ItemTypeController@store');
                 $router->put('/{id}/update', 'ItemTypeController@update');
                 $router->delete('/{id}/delete', 'ItemTypeController@destroy');
+
+                $router->get('/{id}/budgets', 'ItemTypeController@getBudgets');
+                $router->post('/{id}/budgets', 'ItemTypeController@storeBudget');
+                $router->put('/{id}/budgets/{budgetId}', 'ItemTypeController@updateBudget');
+                $router->delete('/{id}/budgets/{budgetId}', 'ItemTypeController@destroyBudget');
             });
 
             $router->group(['prefix' => 'document-types'], function () use ($router) {
@@ -151,6 +157,13 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->post('/store', 'DocumentTypeController@store');
                 $router->put('/{id}/update', 'DocumentTypeController@update');
                 $router->delete('/{id}/delete', 'DocumentTypeController@destroy');
+            });
+
+            $router->group(['prefix' => 'shipments'], function () use ($router) {
+                $router->get('/', 'ShipmentController@index');
+                $router->get('/{id}/show', 'ShipmentController@show');
+                $router->post('/store', 'ShipmentController@store');
+                $router->put('/{id}/status', 'ShipmentController@updateStatus');
             });
         });
 

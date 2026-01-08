@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class PlenaryMeetingItem extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'plenary_meeting_id',
         'cooperative_id',
@@ -15,7 +17,7 @@ class PlenaryMeetingItem extends Model
         'package_quantity',
         'note',
         'location',
-        'unit_price',
+        'created_by',
     ];
 
     public function meeting()
@@ -38,47 +40,25 @@ class PlenaryMeetingItem extends Model
         return $this->belongsTo(CpclDocument::class, 'cpcl_document_id');
     }
 
-    public function procurementItems()
-    {
-        return $this->hasMany(ProcurementItem::class);
-    }
-
     public function procurementItem()
     {
         return $this->hasOne(ProcurementItem::class, 'plenary_meeting_item_id');
     }
 
-    public function plenaryMeeting()
+    public function creator()
     {
-        return $this->belongsTo(
-            PlenaryMeeting::class,
-            'plenary_meeting_id',
-            'id'
-        );
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function items()
+    public function logs()
     {
-        return $this->hasMany(
-            PlenaryMeetingItem::class,
-            'plenary_meeting_id',
-            'id'
-        );
-    }
-
-    public function attendees()
-    {
-        return $this->hasMany(
-            PlenaryMeetingAttendee::class,
-            'plenary_meeting_id',
-            'id'
-        );
+        return $this->hasMany(PlenaryMeetingItemLog::class);
     }
 
     protected static function booted()
     {
         static::creating(function ($item) {
-            if (Auth::check()) {
+            if (Auth::check() && !$item->created_by) {
                 $item->created_by = Auth::id();
             }
         });
@@ -125,15 +105,5 @@ class PlenaryMeetingItem extends Model
                 ]);
             }
         });
-    }
-
-    public function logs()
-    {
-        return $this->hasMany(PlenaryMeetingItemLog::class, 'plenary_meeting_item_id');
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -28,6 +28,13 @@ class CooperativeController extends Controller
 
             $query = Cooperative::query()->orderByDesc('id');
 
+            // Archive Filter
+            if ($request->get('filter') === 'archived') {
+                $query->onlyTrashed();
+            } elseif ($request->get('show_archived') === 'true') {
+                $query->withTrashed();
+            }
+
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
@@ -51,7 +58,7 @@ class CooperativeController extends Controller
             return ApiResponse::error('Invalid cooperative id', 400);
         }
 
-        $cooperative = Cooperative::find($id);
+        $cooperative = Cooperative::withTrashed()->with('area')->find($id);
 
         if (!$cooperative) {
             return ApiResponse::error('Cooperative not found', 400);

@@ -3,28 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CpclAnswer extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'cpcl_document_id',
-        'cpcl_applicant_id',
         'group_field_row_id',
-        'value',
+        'answer_value',
     ];
 
     protected $casts = [
-        'value' => 'array',
+        'answer_value' => 'array',
     ];
 
     public function document()
     {
-        return $this->belongsTo(CpclDocument::class);
-    }
-
-    public function applicant()
-    {
-        return $this->belongsTo(CpclApplicant::class);
+        return $this->belongsTo(CpclDocument::class, 'cpcl_document_id');
     }
 
     public function fieldRow()

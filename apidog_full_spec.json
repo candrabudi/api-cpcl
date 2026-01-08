@@ -1,0 +1,1846 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "CPCL API Comprehensive Documentation",
+        "description": "Full documentation for CPCL API, covering all routes including Auth, Admin Management, CPCL Flow, Procurement, and Shipments.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local Development Server"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login to system",
+                "security": [],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "login": {
+                                        "type": "string",
+                                        "example": "admin"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/auth/verify-otp": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Verify OTP after login",
+                "security": [],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Refresh JWT Token",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get my profile",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update profile details",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/profile/change-password": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Change password",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users": {
+            "get": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "List admin users",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/store": {
+            "post": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Store new user",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/{id}/show": {
+            "get": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Show user detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/{id}/update": {
+            "put": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/{id}/lock": {
+            "put": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Lock user account",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/admin-users/{id}/unlock": {
+            "put": {
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Unlock user account",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/group-fields": {
+            "get": {
+                "tags": [
+                    "Group Fields"
+                ],
+                "summary": "List group fields",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Group Fields"
+                ],
+                "summary": "Store group field",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/group-fields/{id}/show": {
+            "get": {
+                "tags": [
+                    "Group Fields"
+                ],
+                "summary": "Show group field",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/group-fields/{id}/update": {
+            "put": {
+                "tags": [
+                    "Group Fields"
+                ],
+                "summary": "Update group field",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/group-fields/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Group Fields"
+                ],
+                "summary": "Delete group field",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents": {
+            "get": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "List CPCL documents",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/store": {
+            "post": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "Store CPCL document",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{id}/show": {
+            "get": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "Show document",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{id}/update": {
+            "put": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "Update document",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "Delete document",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{id}/status": {
+            "put": {
+                "tags": [
+                    "CPCL Documents"
+                ],
+                "summary": "Update document status",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-applicants": {
+            "get": {
+                "tags": [
+                    "CPCL Applicants"
+                ],
+                "summary": "List applicants",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-applicants/store": {
+            "post": {
+                "tags": [
+                    "CPCL Applicants"
+                ],
+                "summary": "Store applicant",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-applicants/{id}/show": {
+            "get": {
+                "tags": [
+                    "CPCL Applicants"
+                ],
+                "summary": "Show applicant",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-applicants/{id}/update": {
+            "put": {
+                "tags": [
+                    "CPCL Applicants"
+                ],
+                "summary": "Update applicant",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-applicants/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "CPCL Applicants"
+                ],
+                "summary": "Delete applicant",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives": {
+            "get": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "List cooperatives",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/store": {
+            "post": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Store cooperative",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/{id}/show": {
+            "get": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Show cooperative",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/{id}/update": {
+            "put": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Update cooperative",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Delete cooperative",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/{cooperativeID}/procurements": {
+            "get": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Get cooperative procurements",
+                "parameters": [
+                    {
+                        "name": "cooperativeID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cooperatives/{cooperativeID}/procurements/{procurementID}/items": {
+            "get": {
+                "tags": [
+                    "Cooperatives"
+                ],
+                "summary": "Get cooperative procurement items",
+                "parameters": [
+                    {
+                        "name": "cooperativeID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "procurementID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-answers/store": {
+            "post": {
+                "tags": [
+                    "CPCL Answers"
+                ],
+                "summary": "Store CPCL answers",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-answers/{cpclDocumentId}/detail": {
+            "get": {
+                "tags": [
+                    "CPCL Answers"
+                ],
+                "summary": "Get answers by document ID",
+                "parameters": [
+                    {
+                        "name": "cpclDocumentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{cpclDocumentId}/fishing-vessels": {
+            "get": {
+                "tags": [
+                    "CPCL Fishing Vessels"
+                ],
+                "summary": "List fishing vessels",
+                "parameters": [
+                    {
+                        "name": "cpclDocumentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{cpclDocumentId}/fishing-vessels/store": {
+            "post": {
+                "tags": [
+                    "CPCL Fishing Vessels"
+                ],
+                "summary": "Store fishing vessel",
+                "parameters": [
+                    {
+                        "name": "cpclDocumentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/cpcl-documents/{cpclDocumentId}/fishing-vessels/update": {
+            "put": {
+                "tags": [
+                    "CPCL Fishing Vessels"
+                ],
+                "summary": "Update fishing vessel",
+                "parameters": [
+                    {
+                        "name": "cpclDocumentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/areas/search": {
+            "get": {
+                "tags": [
+                    "Areas"
+                ],
+                "summary": "Search areas",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings": {
+            "get": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "List plenary meetings",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings/store": {
+            "post": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "Store plenary meeting",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings/{id}/show": {
+            "get": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "Show plenary meeting",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings/{id}/update": {
+            "put": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "Update plenary meeting",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "Delete plenary meeting",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/plenary-meetings/unpronounced-items": {
+            "get": {
+                "tags": [
+                    "Plenary Meetings"
+                ],
+                "summary": "List unpronounced items",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/annual-budgets": {
+            "get": {
+                "tags": [
+                    "Annual Budgets"
+                ],
+                "summary": "List budgets",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Annual Budgets"
+                ],
+                "summary": "Store budget",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/annual-budgets/{id}/show": {
+            "get": {
+                "tags": [
+                    "Annual Budgets"
+                ],
+                "summary": "Show budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/annual-budgets/{id}/update": {
+            "put": {
+                "tags": [
+                    "Annual Budgets"
+                ],
+                "summary": "Update budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/annual-budgets/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Annual Budgets"
+                ],
+                "summary": "Delete budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors": {
+            "get": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "List vendors",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/store": {
+            "post": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Store vendor",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/{id}/show": {
+            "get": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Show vendor detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/{id}/update": {
+            "post": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Update vendor",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Delete vendor",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/procurements/{vendorID}/show": {
+            "get": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Show vendor procurements",
+                "parameters": [
+                    {
+                        "name": "vendorID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendors/procurements/{vendorID}/{procurementID}/items": {
+            "get": {
+                "tags": [
+                    "Vendors"
+                ],
+                "summary": "Get vendor procurement items",
+                "parameters": [
+                    {
+                        "name": "vendorID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "procurementID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/procurements": {
+            "get": {
+                "tags": [
+                    "Procurements"
+                ],
+                "summary": "List procurements",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/procurements/store": {
+            "post": {
+                "tags": [
+                    "Procurements"
+                ],
+                "summary": "Store procurement",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/procurements/{id}/show": {
+            "get": {
+                "tags": [
+                    "Procurements"
+                ],
+                "summary": "Show procurement detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/procurements/{id}/update": {
+            "put": {
+                "tags": [
+                    "Procurements"
+                ],
+                "summary": "Update procurement",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/procurements/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Procurements"
+                ],
+                "summary": "Delete procurement",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items": {
+            "get": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "List items",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items/store": {
+            "post": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Store item",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items/{id}/show": {
+            "get": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Show item detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items/{id}/update": {
+            "put": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Update item",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Delete item",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/items/types": {
+            "get": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "List item categories/types",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types": {
+            "get": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "List types",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Store type",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types/{id}/show": {
+            "get": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Show type detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types/{id}/update": {
+            "put": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Update type",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Delete type",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types/{id}/budgets": {
+            "get": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "List type budgets",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Store type budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/item-types/{id}/budgets/{budgetId}": {
+            "put": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Update type budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "budgetId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Item Types"
+                ],
+                "summary": "Delete type budget",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "budgetId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/document-types": {
+            "get": {
+                "tags": [
+                    "Document Types"
+                ],
+                "summary": "List doc types",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Document Types"
+                ],
+                "summary": "Store doc type",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/document-types/{id}/show": {
+            "get": {
+                "tags": [
+                    "Document Types"
+                ],
+                "summary": "Show doc type",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/document-types/{id}/update": {
+            "put": {
+                "tags": [
+                    "Document Types"
+                ],
+                "summary": "Update doc type",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/document-types/{id}/delete": {
+            "delete": {
+                "tags": [
+                    "Document Types"
+                ],
+                "summary": "Delete doc type",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/shipments": {
+            "get": {
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "List shipments",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/shipments/store": {
+            "post": {
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Store shipment",
+                "responses": {
+                    "201": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/shipments/{id}/show": {
+            "get": {
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Show shipment detail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/shipments/{id}/status": {
+            "put": {
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Update shipment status",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendor/procurements": {
+            "get": {
+                "tags": [
+                    "Vendor Dashboard"
+                ],
+                "summary": "Vendor: List my items",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendor/procurements/{id}/delivery-status": {
+            "put": {
+                "tags": [
+                    "Vendor Dashboard"
+                ],
+                "summary": "Vendor: Update delivery status",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/vendor/procurements/{id}/process-status": {
+            "put": {
+                "tags": [
+                    "Vendor Dashboard"
+                ],
+                "summary": "Vendor: Update production status",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        }
+    }
+}

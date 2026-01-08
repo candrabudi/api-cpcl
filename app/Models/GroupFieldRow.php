@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class GroupFieldRow extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'group_field_id',
         'label',
@@ -20,11 +22,12 @@ class GroupFieldRow extends Model
     protected $casts = [
         'value' => 'array',
         'meta' => 'array',
+        'is_required' => 'boolean',
     ];
 
-    public function document()
+    public function groupField()
     {
-        return $this->belongsTo(CpclDocument::class, 'group_field_id');
+        return $this->belongsTo(GroupField::class);
     }
 
     public function parent()
@@ -38,13 +41,8 @@ class GroupFieldRow extends Model
             ->orderBy('order_no');
     }
 
-    public function allChildren()
+    public function answers()
     {
-        return $this->children()->with('allChildren');
-    }
-
-    public function childrenCount()
-    {
-        return $this->children()->count();
+        return $this->hasMany(CpclAnswer::class, 'group_field_row_id');
     }
 }

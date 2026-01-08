@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class PlenaryMeeting extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'meeting_title',
         'meeting_date',
@@ -15,6 +17,7 @@ class PlenaryMeeting extends Model
         'chairperson',
         'secretary',
         'notes',
+        'created_by',
     ];
 
     public function items()
@@ -27,10 +30,20 @@ class PlenaryMeeting extends Model
         return $this->hasMany(PlenaryMeetingAttendee::class);
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(PlenaryMeetingLog::class);
+    }
+
     protected static function booted()
     {
         static::creating(function ($meeting) {
-            if (Auth::check()) {
+            if (Auth::check() && !$meeting->created_by) {
                 $meeting->created_by = Auth::id();
             }
         });
@@ -77,15 +90,5 @@ class PlenaryMeeting extends Model
                 ]);
             }
         });
-    }
-
-    public function logs()
-    {
-        return $this->hasMany(PlenaryMeetingLog::class, 'plenary_meeting_id');
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

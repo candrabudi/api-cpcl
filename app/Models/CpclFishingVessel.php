@@ -3,21 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CpclFishingVessel extends Model
 {
-    protected $table = 'cpcl_fishing_vessels';
-
+    use SoftDeletes;
     protected $fillable = [
         'cpcl_document_id',
-        'ship_type',
-        'engine_brand',
-        'engine_power',
-        'quantity',
+        'vessel_name',
+        'owner_name',
+        'gt_volume',
+        'vessel_type',
     ];
 
-    public function cpclDocument()
+    public function document()
     {
-        return $this->belongsTo(CpclDocument::class);
+        return $this->belongsTo(CpclDocument::class, 'cpcl_document_id');
     }
 }

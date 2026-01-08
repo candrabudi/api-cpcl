@@ -3,20 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProcurementItem extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'procurement_id',
         'plenary_meeting_item_id',
-        'vendor_id',
+        'plenary_meeting_id',
         'quantity',
         'unit_price',
         'total_price',
         'delivery_status',
-        'estimated_delivery_date',
-        'actual_delivery_date',
-        'received_at',
+        'process_status',
+        'created_by',
     ];
 
     public function procurement()
@@ -24,34 +25,29 @@ class ProcurementItem extends Model
         return $this->belongsTo(Procurement::class);
     }
 
+    public function plenaryMeeting()
+    {
+        return $this->belongsTo(PlenaryMeeting::class);
+    }
+
     public function plenaryMeetingItem()
     {
         return $this->belongsTo(PlenaryMeetingItem::class);
     }
 
-    public function deliveryLogs()
+    public function processStatuses()
     {
-        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
-    }
-
-    public function processLogs()
-    {
-        return $this->hasMany(ProcurementItemProcessStatus::class)->orderByDesc('id');
+        return $this->hasMany(ProcurementItemProcessStatus::class, 'procurement_item_id');
     }
 
     public function statusLogs()
     {
-        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
+        return $this->hasMany(ShipmentStatusLog::class, 'procurement_item_id');
     }
 
-    public function processStatuses()
+    public function creator()
     {
-        return $this->hasMany(ProcurementItemStatusLog::class)->orderByDesc('id');
-    }
-
-    public function vendor()
-    {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function item()

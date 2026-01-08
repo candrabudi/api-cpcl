@@ -10,5 +10,6 @@ class LoginLog extends Model
         'user_id',
         'ip_address',
         'otp_verified_at',
+        'login_at',
     ];
 }

@@ -13,10 +13,7 @@ class CpclApplicant extends Model
 
     protected $fillable = [
         'cpcl_document_id',
-        'full_name',
-        'nik',
-        'phone_number',
-        'address',
+        'cooperative_id',
     ];
 
     public function document()

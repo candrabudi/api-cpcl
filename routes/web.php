@@ -167,10 +167,20 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             });
         });
 
-        $router->group(['prefix' => 'vendor'], function () use ($router) {
-            $router->get('/procurements', 'ProcurementVendorController@index');
-            $router->put('/procurements/{id}/delivery-status', 'ProcurementVendorController@updateDeliveryStatus');
-            $router->put('/procurements/{id}/process-status', 'ProcurementVendorController@updateProcessStatus');
+        // Vendor Mobile specific routes
+        $router->group(['prefix' => '/mobile/vendor', 'namespace' => 'Vendor', 'middleware' => 'vendor'], function () use ($router) {
+            $router->get('/dashboard', 'ProcurementController@dashboard');
+            
+            $router->get('/procurements', 'ProcurementController@index');
+            $router->get('/procurements/{id}', 'ProcurementController@show');
+            $router->put('/procurements/{id}/delivery-status', 'ProcurementController@updateDeliveryStatus');
+            $router->put('/procurements/{id}/process-status', 'ProcurementController@updateProcessStatus');
+
+            // Shipment Management for Vendor
+            $router->get('/shipments', 'ShipmentController@index');
+            $router->get('/shipments/{id}', 'ShipmentController@show');
+            $router->post('/shipments/store', 'ShipmentController@store');
+            $router->put('/shipments/{id}/status', 'ShipmentController@updateStatus');
         });
     });
 });

@@ -56,6 +56,7 @@ $app->register(Illuminate\Filesystem\FilesystemServiceProvider::class);
 $app->routeMiddleware([
     'auth' => App\Http\Middleware\Authenticate::class,
     'admin' => App\Http\Middleware\AdminMiddleware::class,
+    'vendor' => App\Http\Middleware\VendorMiddleware::class,
 ]);
 $app->middleware([
     App\Http\Middleware\CorsMiddleware::class,

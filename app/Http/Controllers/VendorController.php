@@ -16,13 +16,25 @@ class VendorController extends Controller
 {
     private function recalcVendorTotals(Vendor $vendor)
     {
-        // Get total paid through procurement relationship
-        $totalPaid = ProcurementItem::whereHas('procurement', function ($query) use ($vendor) {
-            $query->where('vendor_id', $vendor->id);
-        })->sum('total_price');
+        try {
+            DB::beginTransaction();
 
-        $vendor->total_paid = $totalPaid;
-        $vendor->save();
+            $totalPaid = ProcurementItem::whereHas('procurement', function ($query) use ($vendor) {
+                $query->where('vendor_id', $vendor->id);
+            })->sum('total_price');
+
+            $vendor->total_paid = $totalPaid;
+            $vendor->save();
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Failed to recalculate vendor totals', [
+                'vendor_id' => $vendor->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
 
     public function index(Request $request)
@@ -31,7 +43,6 @@ class VendorController extends Controller
 
         $query = Vendor::with(['user', 'area', 'documents.documentType'])->orderByDesc('id');
 
-        // Archive Filter
         if ($request->get('filter') === 'archived') {
             $query->onlyTrashed();
         } elseif ($request->get('show_archived') === 'true') {
@@ -69,7 +80,15 @@ class VendorController extends Controller
             return ApiResponse::error('Vendor not found', 400);
         }
 
-        $this->recalcVendorTotals($vendor);
+        try {
+            $this->recalcVendorTotals($vendor);
+        } catch (\Throwable $e) {
+            \Log::warning('Could not recalculate vendor totals, returning existing data', [
+                'vendor_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            // Continue with existing total_paid value
+        }
 
         return ApiResponse::success('Vendor detail', $vendor);
     }
@@ -85,7 +104,9 @@ class VendorController extends Controller
         $vendorId = $vendorID;
 
         $itemsQuery = ProcurementItem::with('procurement')
-            ->where('vendor_id', $vendorId);
+            ->whereHas('procurement', function ($q) use ($vendorId) {
+                $q->where('vendor_id', $vendorId);
+            });
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -138,7 +159,9 @@ class VendorController extends Controller
             'statusLogs',
             'processStatuses',
         ])
-        ->where('vendor_id', $vendorID)
+        ->whereHas('procurement', function ($q) use ($vendorID) {
+            $q->where('vendor_id', $vendorID);
+        })
         ->where('procurement_id', $procurementID)
         ->get();
 

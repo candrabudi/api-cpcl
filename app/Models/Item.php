@@ -14,6 +14,7 @@ class Item extends Model
         'item_type_id',
         'description',
         'unit',
+        'process_type',
         'created_by',
     ];
 

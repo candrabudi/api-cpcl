@@ -106,7 +106,7 @@ class CpclDocumentController extends Controller
             'cpcl_date' => 'sometimes|required|date',
             'prepared_by' => 'sometimes|required|exists:users,id',
             'notes' => 'nullable|string',
-            'status' => 'sometimes|required|in:draft,submitted,verified,approved,rejected',
+            'status' => 'sometimes|required|in:draft,published,submitted,verified,approved,rejected',
         ]);
 
         if ($validator->fails()) {

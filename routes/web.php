@@ -49,8 +49,9 @@ $router->group(['prefix' => 'api'], function () use ($router) {
 
             $router->group(['prefix' => 'cpcl-documents'], function () use ($router) {
                 $router->get('/', 'CpclDocumentController@index');
+                $router->post('/', 'CpclDocumentController@store'); // Allow POST to root for creation
                 $router->get('{id}/show', 'CpclDocumentController@show');
-                $router->post('/store', 'CpclDocumentController@store');
+                $router->post('store', 'CpclDocumentController@store');
                 $router->put('{id}/update', 'CpclDocumentController@update');
                 $router->delete('{id}/delete', 'CpclDocumentController@destroy');
                 $router->put('{id}/status', 'CpclDocumentController@updateStatus');

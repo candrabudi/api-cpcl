@@ -73,4 +73,9 @@ class ProcurementItem extends Model
             'cooperative_id'
         );
     }
+
+    public function shipmentItems()
+    {
+        return $this->hasMany(ShipmentItem::class);
+    }
 }

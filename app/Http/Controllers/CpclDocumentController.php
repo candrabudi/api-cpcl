@@ -24,7 +24,7 @@ class CpclDocumentController extends Controller
     {
         $perPage = (int) $request->get('per_page', 15);
         
-        $query = CpclDocument::with('creator')->orderByDesc('id');
+        $query = CpclDocument::with(['creator', 'preparedBy'])->orderByDesc('id');
 
         // Archive Filter
         if ($request->get('filter') === 'archived') {
@@ -35,7 +35,8 @@ class CpclDocumentController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('document_number', 'like', "%{$search}%")
+            $query->where('program_code', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%")
                   ->orWhere('notes', 'like', "%{$search}%");
         }
 
@@ -48,7 +49,7 @@ class CpclDocumentController extends Controller
 
     public function show($id)
     {
-        $document = CpclDocument::withTrashed()->with(['applicants', 'answers.fieldRow', 'fishingVessels', 'creator'])->find($id);
+        $document = CpclDocument::withTrashed()->with(['applicants', 'answers.fieldRow', 'fishingVessels', 'creator', 'preparedBy'])->find($id);
 
         if (!$document) {
             return ApiResponse::error('Document not found', 404);
@@ -60,8 +61,10 @@ class CpclDocumentController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'document_number' => 'required|string|max:100|unique:cpcl_documents,document_number',
-            'document_date' => 'required|date',
+            'title' => 'required|string|max:255',
+            'program_code' => 'required|string|max:100|unique:cpcl_documents,program_code',
+            'cpcl_date' => 'required|date',
+            'prepared_by' => 'required|exists:users,id',
             'notes' => 'nullable|string',
         ]);
 
@@ -70,9 +73,14 @@ class CpclDocumentController extends Controller
         }
 
         try {
+            $cpclDate = Carbon::parse($request->cpcl_date);
             $document = CpclDocument::create([
-                'document_number' => $request->document_number,
-                'document_date' => Carbon::parse($request->document_date),
+                'title' => $request->title,
+                'program_code' => $request->program_code,
+                'year' => $cpclDate->year,
+                'cpcl_date' => $cpclDate,
+                'cpcl_month' => $cpclDate->month,
+                'prepared_by' => $request->prepared_by,
                 'notes' => $request->notes,
                 'status' => 'draft',
                 'created_by' => Auth::id(),
@@ -93,8 +101,10 @@ class CpclDocumentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'document_number' => 'sometimes|required|string|max:100|unique:cpcl_documents,document_number,' . $id,
-            'document_date' => 'sometimes|required|date',
+            'title' => 'sometimes|required|string|max:255',
+            'program_code' => 'sometimes|required|string|max:100|unique:cpcl_documents,program_code,' . $id,
+            'cpcl_date' => 'sometimes|required|date',
+            'prepared_by' => 'sometimes|required|exists:users,id',
             'notes' => 'nullable|string',
             'status' => 'sometimes|required|in:draft,submitted,verified,approved,rejected',
         ]);
@@ -104,7 +114,23 @@ class CpclDocumentController extends Controller
         }
 
         try {
-            $document->update($request->only(['document_number', 'document_date', 'notes', 'status']));
+            $data = $request->only([
+                'title', 
+                'program_code', 
+                'cpcl_date', 
+                'prepared_by', 
+                'notes', 
+                'status'
+            ]);
+
+            if ($request->filled('cpcl_date')) {
+                $cpclDate = Carbon::parse($request->cpcl_date);
+                $data['year'] = $cpclDate->year;
+                $data['cpcl_month'] = $cpclDate->month;
+                $data['cpcl_date'] = $cpclDate;
+            }
+
+            $document->update($data);
             return ApiResponse::success('CPCL document updated', $document);
         } catch (\Throwable $e) {
             return ApiResponse::error('Failed to update CPCL document: ' . $e->getMessage(), 500);

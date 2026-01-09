@@ -9,8 +9,12 @@ class CpclDocument extends Model
 {
     use SoftDeletes;
     protected $fillable = [
-        'document_number',
-        'document_date',
+        'title',
+        'program_code',
+        'year',
+        'cpcl_date',
+        'cpcl_month',
+        'prepared_by',
         'status',
         'notes',
         'created_by',
@@ -19,6 +23,11 @@ class CpclDocument extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function preparedBy()
+    {
+        return $this->belongsTo(User::class, 'prepared_by');
     }
 
     public function applicants()

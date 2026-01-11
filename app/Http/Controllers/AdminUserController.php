@@ -14,7 +14,7 @@ class AdminUserController extends Controller
 {
     private function allowedRoles()
     {
-        return ['admin', 'superadmin'];
+        return ['admin', 'vendor','superadmin'];
     }
 
     private function authorizeAccess(Request $request)

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('shipments', function (Blueprint $table) {
-            $table->foreignId('cooperative_id')->nullable()->after('vendor_id')->constrained('cooperatives')->nullOnDelete();
+            $table->foreignId('area_id')->nullable()->after('vendor_id')->constrained('areas')->nullOnDelete();
         });
     }
 
@@ -26,8 +26,8 @@ return new class extends Migration
     public function down()
     {
         Schema::table('shipments', function (Blueprint $table) {
-            $table->dropForeign(['cooperative_id']);
-            $table->dropColumn(['cooperative_id']);
+            $table->dropForeign(['area_id']);
+            $table->dropColumn(['area_id']);
         });
     }
 };

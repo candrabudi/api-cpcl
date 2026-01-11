@@ -104,7 +104,7 @@ class ShipmentController extends Controller
             ->where('delivery_status', '!=', 'shipped')
             ->with([
                 'procurement',
-                'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
+                'plenaryMeetingItem.cooperative.area', // Load Area
                 'plenaryMeetingItem.item.type',
             ])
             ->withSum(['shipmentItems' => function($q) {
@@ -116,7 +116,6 @@ class ShipmentController extends Controller
         $items = $query->get();
 
         // Filter items that are ready for shipping
-        // For production items, process_status must be 'completed'
         $readyItems = $items->filter(function($procItem) {
              $itemModel = $procItem->plenaryMeetingItem?->item;
              if ($itemModel && $itemModel->process_type === 'production') {
@@ -125,26 +124,24 @@ class ShipmentController extends Controller
              return true; 
         });
 
-        // Group by Cooperative
+        // Group by Cooperative Area ID
         $grouped = $readyItems->groupBy(function($item) {
-            return $item->plenaryMeetingItem->cooperative_id;
-        })->map(function($items, $cooperativeId) {
+            return $item->plenaryMeetingItem->cooperative->area_id ?? 0; // 0 for no area
+        })->map(function($items, $areaId) {
             $firstItem = $items->first();
-            $cooperative = $firstItem->plenaryMeetingItem->cooperative;
+            $area = $firstItem->plenaryMeetingItem->cooperative->area ?? null;
             
-            // Build the base cooperative object
-            $entry = $cooperative ? [
-                'id' => $cooperative->id,
-                'name' => $cooperative->name,
-                'code' => $cooperative->code ?? null,
-                'address' => $cooperative->street_address ?? null,
-                'phone' => $cooperative->phone_number ?? null,
+            // Build the base AREA object
+            $entry = $area ? [
+                'id' => $area->id,
+                'name' => $area->name,
+                'code' => $area->code ?? null,
+                'regency' => $area->regency_name ?? null, 
+                // Adapt fields based on Area model structure (assuming standard fields)
             ] : [
-                'id' => $cooperativeId,
-                'name' => "Unknown Cooperative (ID: $cooperativeId)",
+                'id' => 0,
+                'name' => "Unknown Area / No Area Assigned",
                 'code' => null,
-                'address' => null,
-                'phone' => null,
             ];
 
             // Add items directly to the object
@@ -152,13 +149,15 @@ class ShipmentController extends Controller
                 $shippedQty = $item->shipment_items_sum_quantity ?? 0;
                 $remainingQty = max(0, $item->quantity - $shippedQty);
 
-                // Skip if no remaining quantity (fully shipped logic safety)
                 if ($remainingQty <= 0) return null;
+
+                $coop = $item->plenaryMeetingItem->cooperative;
 
                 return [
                     'procurement_item_id' => $item->id,
                     'procurement_id' => $item->procurement_id,
                     'procurement_number' => $item->procurement->procurement_number,
+                    'cooperative_name' => $coop->name ?? 'Unknown Cooperative', // Info tambahan krn grouped by area
                     'item_id' => $item->plenaryMeetingItem->item_id ?? null,
                     'item_name' => $item->plenaryMeetingItem->item->name ?? 'Unknown Item',
                     'item_unit' => $item->plenaryMeetingItem->item->unit ?? 'Unit',
@@ -167,14 +166,14 @@ class ShipmentController extends Controller
                     'quantity_remaining' => $remainingQty,
                     'delivery_status' => $item->delivery_status,
                 ];
-            })->filter()->values(); // Remove nulls (fully shipped ones that slipped through query)
+            })->filter()->values(); 
             
             return $entry;
         })->filter(function($entry) {
             return $entry['items']->isNotEmpty();
         })->values();
 
-        return ApiResponse::success('Unshipped items grouped by cooperative', $grouped);
+        return ApiResponse::success('Unshipped items grouped by area', $grouped);
     }
 
     public function store(Request $request)
@@ -187,7 +186,7 @@ class ShipmentController extends Controller
         $validator = Validator::make($request->all(), [
             'tracking_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
-            'cooperative_id' => 'required|exists:cooperatives,id',
+            'area_id' => 'required|exists:areas,id',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
         ]);
@@ -201,7 +200,7 @@ class ShipmentController extends Controller
 
             $shipment = Shipment::create([
                 'vendor_id' => $vendor->id,
-                'cooperative_id' => $request->cooperative_id,
+                'area_id' => $request->area_id,
                 'tracking_number' => $request->tracking_number,
                 'status' => 'pending',
                 'notes' => $request->notes,
@@ -209,7 +208,7 @@ class ShipmentController extends Controller
             ]);
 
             foreach ($request->items as $itemData) {
-                $procurementItem = \App\Models\ProcurementItem::with('plenaryMeetingItem')
+                $procurementItem = \App\Models\ProcurementItem::with('plenaryMeetingItem.cooperative')
                     ->whereHas('procurement', function($q) use ($vendor) {
                         $q->where('vendor_id', $vendor->id);
                     })->find($itemData['procurement_item_id']);
@@ -218,72 +217,68 @@ class ShipmentController extends Controller
                     throw new \Exception("Procurement item ID {$itemData['procurement_item_id']} not found or does not belong to your vendor.");
                 }
 
-                // Verify cooperative match
-                if ($procurementItem->plenaryMeetingItem->cooperative_id != $request->cooperative_id) {
-                     // Since we load withTrasred in other places, check if trashed affects this.
-                     // Accessing cooperative_id on relation should be fine if plenaryMeetingItem exists.
-                     // If plenaryMeetingItem is softDeleted, we might need withTrashed() on the relation above if we want to allow shipping for deleted meeting items (unlikely).
-                     // For now assume standard relation.
-                     throw new \Exception("Item ID {$itemData['procurement_item_id']} does not belong to the selected cooperative.");
+                // Verify AREA match
+                $itemAreaId = $procurementItem->plenaryMeetingItem->cooperative->area_id ?? null;
+                if ($itemAreaId != $request->area_id) {
+                     throw new \Exception("Item '{$procurementItem->plenaryMeetingItem->item->name}' belongs to an area (ID: $itemAreaId) different from the selected shipment area (ID: {$request->area_id}).");
                 }
 
-                // Validation: If it's a production item, status must be 'completed' before shipping
+                // Validation: Production status
                 $itemModel = $procurementItem->plenaryMeetingItem?->item;
                 if ($itemModel && $itemModel->process_type === 'production') {
                     if ($procurementItem->process_status !== 'completed') {
-                        throw new \Exception("Item '{$itemModel->name}' cannot be shipped. Production process is not yet completed (current status: {$procurementItem->process_status}).");
+                        throw new \Exception("Item '{$itemModel->name}' cannot be shipped. Production process is not yet completed.");
                     }
                 }
 
-                // Automatically use remaining quantity or use requested quantity
-            $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
-                ->whereHas('shipment', function($q) {
-                    $q->where('status', '!=', 'cancelled');
-                })
-                ->sum('quantity');
-            $remainingQty = $procurementItem->quantity - $shippedQty;
+                // Quantity Logic
+                $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
+                    ->whereHas('shipment', function($q) {
+                        $q->where('status', '!=', 'cancelled');
+                    })
+                    ->sum('quantity');
+                $remainingQty = $procurementItem->quantity - $shippedQty;
 
-            $quantityToShip = $remainingQty;
-            if (isset($itemData['quantity']) && is_numeric($itemData['quantity'])) {
-                $quantityToShip = (int) $itemData['quantity'];
-            }
+                $quantityToShip = $remainingQty;
+                if (isset($itemData['quantity']) && is_numeric($itemData['quantity'])) {
+                    $quantityToShip = (int) $itemData['quantity'];
+                }
 
-            if ($quantityToShip <= 0) {
-                 throw new \Exception("Invalid quantity to ship for item '{$procurementItem->id}'. Must be greater than 0.");
-            }
+                if ($quantityToShip <= 0) {
+                     throw new \Exception("Invalid quantity to ship for item '{$procurementItem->id}'. Must be greater than 0.");
+                }
 
-            if ($quantityToShip > $remainingQty) {
-                // Friendly error message with item name
-                $itemName = $procurementItem->plenaryMeetingItem->item->name ?? 'Unknown Item';
-                throw new \Exception("Quantity for '$itemName' ($quantityToShip) exceeds remaining quantity ($remainingQty).");
-            }
+                if ($quantityToShip > $remainingQty) {
+                    $itemName = $procurementItem->plenaryMeetingItem->item->name ?? 'Unknown Item';
+                    throw new \Exception("Quantity for '$itemName' ($quantityToShip) exceeds remaining quantity ($remainingQty).");
+                }
 
-            ShipmentItem::create([
-                'shipment_id' => $shipment->id,
-                'procurement_item_id' => $procurementItem->id,
-                'quantity' => $quantityToShip,
-            ]);
+                ShipmentItem::create([
+                    'shipment_id' => $shipment->id,
+                    'procurement_item_id' => $procurementItem->id,
+                    'quantity' => $quantityToShip,
+                ]);
 
-            // Update procurement item delivery status
-            $newTotalShipped = $shippedQty + $quantityToShip;
-            $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
-            $procurementItem->update(['delivery_status' => $newDeliveryStatus]);
+                // Update procurement item delivery status
+                $newTotalShipped = $shippedQty + $quantityToShip;
+                $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
+                $procurementItem->update(['delivery_status' => $newDeliveryStatus]);
             }
 
             ShipmentStatusLog::create([
                 'shipment_id' => $shipment->id,
                 'status' => 'pending',
                 'notes' => 'Shipment created via Mobile',
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'area_id' => $request->area_id,
+                'latitude' => $request->latitude ?? null, // Nullable safe
+                'longitude' => $request->longitude ?? null,
+                'area_id' => $request->area_id, // Use shipment area as default log area
                 'created_by' => Auth::id(),
                 'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();
 
-            return ApiResponse::success('Shipment created', $shipment->load('items', 'cooperative'), 201);
+            return ApiResponse::success('Shipment created', $shipment->load('items', 'area'), 201);
         } catch (\Throwable $e) {
             DB::rollBack();
             return ApiResponse::error('Failed to create shipment: ' . $e->getMessage(), 500);

@@ -13,7 +13,7 @@ class Shipment extends Model
 
     protected $fillable = [
         'vendor_id',
-        'cooperative_id',
+        'area_id',
         'tracking_number',
         'status',
         'shipped_at',
@@ -34,9 +34,9 @@ class Shipment extends Model
         return $this->belongsTo(Vendor::class);
     }
 
-    public function cooperative()
+    public function area()
     {
-        return $this->belongsTo(Cooperative::class);
+        return $this->belongsTo(Area::class);
     }
 
     public function createdBy()

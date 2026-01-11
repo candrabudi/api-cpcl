@@ -147,7 +147,7 @@ class ShipmentController extends Controller
         $query->where('delivery_status', '!=', 'shipped')
              ->with([
                 'procurement.vendor',
-                'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
+                'plenaryMeetingItem.cooperative.area', // Load Area
                 'plenaryMeetingItem.item.type',
             ])
             ->withSum(['shipmentItems' => function($q) {
@@ -167,26 +167,24 @@ class ShipmentController extends Controller
              return true; 
         });
 
-        // Group by Cooperative
+        // Group by Cooperative AREA ID
         $grouped = $readyItems->groupBy(function($item) {
-            return $item->plenaryMeetingItem->cooperative_id;
-        })->map(function($items, $cooperativeId) {
+            return $item->plenaryMeetingItem->cooperative->area_id ?? 0;
+        })->map(function($items, $areaId) {
             $firstItem = $items->first();
-            $cooperative = $firstItem->plenaryMeetingItem->cooperative;
+            $area = $firstItem->plenaryMeetingItem->cooperative->area ?? null;
             
-            // Build the base cooperative object
-            $entry = $cooperative ? [
-                'id' => $cooperative->id,
-                'name' => $cooperative->name,
-                'code' => $cooperative->code ?? null,
-                'address' => $cooperative->street_address ?? null,
-                'phone' => $cooperative->phone_number ?? null,
+            // Build the base AREA object
+            $entry = $area ? [
+                'id' => $area->id,
+                'name' => $area->name,
+                'code' => $area->code ?? null,
+                'regency' => $area->regency_name ?? null, 
+                // Add more area fields if needed
             ] : [
-                'id' => $cooperativeId,
-                'name' => "Unknown Cooperative (ID: $cooperativeId)",
+                'id' => $areaId, // 0 usually
+                'name' => "Unknown Area / No Area Assigned",
                 'code' => null,
-                'address' => null,
-                'phone' => null,
             ];
 
             // Add items directly to the object
@@ -196,12 +194,15 @@ class ShipmentController extends Controller
 
                 if ($remainingQty <= 0) return null;
 
+                $coop = $item->plenaryMeetingItem->cooperative;
+
                 return [
                     'procurement_item_id' => $item->id,
                     'procurement_id' => $item->procurement_id,
                     'procurement_number' => $item->procurement->procurement_number,
                     'vendor_id' => $item->procurement->vendor_id,
-                    'vendor_name' => $item->procurement->vendor->name ?? 'Unknown Vendor', // Info tambahan buat Admin
+                    'vendor_name' => $item->procurement->vendor->name ?? 'Unknown Vendor',
+                    'cooperative_name' => $coop->name ?? 'Unknown Cooperative', // Info tambahan
                     'item_id' => $item->plenaryMeetingItem->item_id ?? null,
                     'item_name' => $item->plenaryMeetingItem->item->name ?? 'Unknown Item',
                     'item_unit' => $item->plenaryMeetingItem->item->unit ?? 'Unit',
@@ -217,7 +218,7 @@ class ShipmentController extends Controller
             return $entry['items']->isNotEmpty();
         })->values();
 
-        return ApiResponse::success('Unshipped items grouped by cooperative', $grouped);
+        return ApiResponse::success('Unshipped items grouped by area', $grouped);
     }
 
     public function store(Request $request)

@@ -12,9 +12,9 @@ class ProductionTrackingController extends Controller
      * Get production timeline/history for a specific procurement item
      * Shows all status changes with timestamps, attributes, and percentages
      */
-    public function getProductionTimeline(Request $request, $procurementItemId)
+    public function getProductionTimeline(Request $request, $id)
     {
-        if (!is_numeric($procurementItemId)) {
+        if (!is_numeric($id)) {
             return ApiResponse::error('Invalid procurement item ID', 400);
         }
 
@@ -27,7 +27,7 @@ class ProductionTrackingController extends Controller
                 $query->with(['productionAttribute', 'user', 'area'])
                       ->orderBy('created_at', 'asc');
             }
-        ])->find($procurementItemId);
+        ])->find($id);
 
         if (!$item) {
             return ApiResponse::error('Procurement item not found', 404);

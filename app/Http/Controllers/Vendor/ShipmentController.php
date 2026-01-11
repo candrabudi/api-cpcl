@@ -104,7 +104,7 @@ class ShipmentController extends Controller
             ->where('delivery_status', '!=', 'shipped')
             ->with([
                 'procurement',
-                'plenaryMeetingItem.cooperative.area', // Load Area
+                'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
                 'plenaryMeetingItem.item.type',
             ])
             ->withSum(['shipmentItems' => function($q) {
@@ -124,24 +124,26 @@ class ShipmentController extends Controller
              return true; 
         });
 
-        // Group by Cooperative Area ID
+        // Group by Cooperative (Reverted from Area)
         $grouped = $readyItems->groupBy(function($item) {
-            return $item->plenaryMeetingItem->cooperative->area_id ?? 0; // 0 for no area
-        })->map(function($items, $areaId) {
+            return $item->plenaryMeetingItem->cooperative_id;
+        })->map(function($items, $cooperativeId) {
             $firstItem = $items->first();
-            $area = $firstItem->plenaryMeetingItem->cooperative->area ?? null;
+            $cooperative = $firstItem->plenaryMeetingItem->cooperative;
             
-            // Build the base AREA object
-            $entry = $area ? [
-                'id' => $area->id,
-                'name' => $area->name,
-                'code' => $area->code ?? null,
-                'regency' => $area->regency_name ?? null, 
-                // Adapt fields based on Area model structure (assuming standard fields)
+            // Build the base cooperative object
+            $entry = $cooperative ? [
+                'id' => $cooperative->id,
+                'name' => $cooperative->name,
+                'code' => $cooperative->code ?? null,
+                'address' => $cooperative->street_address ?? null,
+                'phone' => $cooperative->phone_number ?? null,
             ] : [
-                'id' => 0,
-                'name' => "Unknown Area / No Area Assigned",
+                'id' => $cooperativeId,
+                'name' => "Unknown Cooperative (ID: $cooperativeId)",
                 'code' => null,
+                'address' => null,
+                'phone' => null,
             ];
 
             // Add items directly to the object
@@ -151,13 +153,10 @@ class ShipmentController extends Controller
 
                 if ($remainingQty <= 0) return null;
 
-                $coop = $item->plenaryMeetingItem->cooperative;
-
                 return [
                     'procurement_item_id' => $item->id,
                     'procurement_id' => $item->procurement_id,
                     'procurement_number' => $item->procurement->procurement_number,
-                    'cooperative_name' => $coop->name ?? 'Unknown Cooperative', // Info tambahan krn grouped by area
                     'item_id' => $item->plenaryMeetingItem->item_id ?? null,
                     'item_name' => $item->plenaryMeetingItem->item->name ?? 'Unknown Item',
                     'item_unit' => $item->plenaryMeetingItem->item->unit ?? 'Unit',
@@ -166,14 +165,14 @@ class ShipmentController extends Controller
                     'quantity_remaining' => $remainingQty,
                     'delivery_status' => $item->delivery_status,
                 ];
-            })->filter()->values(); 
+            })->filter()->values();
             
             return $entry;
         })->filter(function($entry) {
             return $entry['items']->isNotEmpty();
         })->values();
 
-        return ApiResponse::success('Unshipped items grouped by area', $grouped);
+        return ApiResponse::success('Unshipped items grouped by cooperative', $grouped);
     }
 
     public function store(Request $request)
@@ -186,7 +185,8 @@ class ShipmentController extends Controller
         $validator = Validator::make($request->all(), [
             'tracking_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
-            'area_id' => 'required|exists:areas,id',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
         ]);
@@ -200,15 +200,16 @@ class ShipmentController extends Controller
 
             $shipment = Shipment::create([
                 'vendor_id' => $vendor->id,
-                'area_id' => $request->area_id,
                 'tracking_number' => $request->tracking_number,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
                 'status' => 'pending',
                 'notes' => $request->notes,
                 'created_by' => Auth::id(),
             ]);
 
             foreach ($request->items as $itemData) {
-                $procurementItem = \App\Models\ProcurementItem::with('plenaryMeetingItem.cooperative')
+                $procurementItem = \App\Models\ProcurementItem::with('plenaryMeetingItem')
                     ->whereHas('procurement', function($q) use ($vendor) {
                         $q->where('vendor_id', $vendor->id);
                     })->find($itemData['procurement_item_id']);
@@ -217,11 +218,7 @@ class ShipmentController extends Controller
                     throw new \Exception("Procurement item ID {$itemData['procurement_item_id']} not found or does not belong to your vendor.");
                 }
 
-                // Verify AREA match
-                $itemAreaId = $procurementItem->plenaryMeetingItem->cooperative->area_id ?? null;
-                if ($itemAreaId != $request->area_id) {
-                     throw new \Exception("Item '{$procurementItem->plenaryMeetingItem->item->name}' belongs to an area (ID: $itemAreaId) different from the selected shipment area (ID: {$request->area_id}).");
-                }
+                // No Cooperative/Area verification needed as Shipment is just lat/long based now.
 
                 // Validation: Production status
                 $itemModel = $procurementItem->plenaryMeetingItem?->item;
@@ -269,16 +266,16 @@ class ShipmentController extends Controller
                 'shipment_id' => $shipment->id,
                 'status' => 'pending',
                 'notes' => 'Shipment created via Mobile',
-                'latitude' => $request->latitude ?? null, // Nullable safe
+                'latitude' => $request->latitude ?? null, 
                 'longitude' => $request->longitude ?? null,
-                'area_id' => $request->area_id, // Use shipment area as default log area
+                // 'area_id' => null, // Log area_id removed 
                 'created_by' => Auth::id(),
                 'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();
 
-            return ApiResponse::success('Shipment created', $shipment->load('items', 'area'), 201);
+            return ApiResponse::success('Shipment created', $shipment->load('items'), 201);
         } catch (\Throwable $e) {
             DB::rollBack();
             return ApiResponse::error('Failed to create shipment: ' . $e->getMessage(), 500);

@@ -14,7 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('shipments', function (Blueprint $table) {
-            $table->foreignId('area_id')->nullable()->after('vendor_id')->constrained('areas')->nullOnDelete();
+            $table->double('latitude')->nullable()->after('vendor_id');
+            $table->double('longitude')->nullable()->after('latitude');
         });
     }
 
@@ -26,8 +27,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('shipments', function (Blueprint $table) {
-            $table->dropForeign(['area_id']);
-            $table->dropColumn(['area_id']);
+            $table->dropColumn(['latitude', 'longitude']);
         });
     }
 };

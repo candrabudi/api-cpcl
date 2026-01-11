@@ -13,7 +13,8 @@ class Shipment extends Model
 
     protected $fillable = [
         'vendor_id',
-        'area_id',
+        'latitude',
+        'longitude',
         'tracking_number',
         'status',
         'shipped_at',
@@ -27,16 +28,13 @@ class Shipment extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
         'received_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    public function area()
-    {
-        return $this->belongsTo(Area::class);
     }
 
     public function createdBy()

@@ -29,6 +29,8 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         });
 
         $router->group(['middleware' => ['auth', 'admin']], function () use ($router) {
+            $router->get('/dashboard/card/statistics', 'DashboardController@index');
+
             $router->group(['prefix' => 'admin-users'], function () use ($router) {
                 $router->get('/', 'AdminUserController@index');
                 $router->get('/{id}/show', 'AdminUserController@show');

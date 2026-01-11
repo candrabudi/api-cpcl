@@ -20,6 +20,27 @@ class PlenaryMeetingItem extends Model
         'created_by',
     ];
 
+    protected $appends = [
+        'item_name',
+        'item_type_name',
+        'process_type'
+    ];
+
+    public function getItemNameAttribute()
+    {
+        return $this->item?->name;
+    }
+
+    public function getItemTypeNameAttribute()
+    {
+        return $this->item?->type?->name;
+    }
+
+    public function getProcessTypeAttribute()
+    {
+        return $this->item?->process_type;
+    }
+
     public function meeting()
     {
         return $this->belongsTo(PlenaryMeeting::class, 'plenary_meeting_id');

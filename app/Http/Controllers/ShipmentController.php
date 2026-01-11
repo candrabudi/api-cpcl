@@ -40,7 +40,8 @@ class ShipmentController extends Controller
         
         $query = Shipment::with([
             'vendor', 
-            'items.procurementItem.plenaryMeetingItem.item', 
+            'items.procurementItem.item.type', 
+            'items.procurementItem.plenaryMeetingItem.item.type', 
             'statusLogs.user'
         ])->orderByDesc('id');
 
@@ -84,7 +85,8 @@ class ShipmentController extends Controller
 
         $shipment = Shipment::withTrashed()->with([
             'vendor',
-            'items.procurementItem.plenaryMeetingItem.item'
+            'items.procurementItem.item.type',
+            'items.procurementItem.plenaryMeetingItem.item.type'
         ])->find($id);
 
         if (!$shipment) {
@@ -124,6 +126,100 @@ class ShipmentController extends Controller
         return ApiResponse::success('Shipment tracking history retrieved', $logs);
     }
 
+    public function listUnshippedItems(Request $request)
+    {
+        $adminCheck = in_array($request->user()->role, ['admin', 'superadmin']);
+        $vendorId = $request->get('vendor_id');
+
+        // If user is vendor role (accessing this controller for some reason), force vendorId
+        if ($request->user()->role === 'vendor' && $request->user()->vendor) {
+             $vendorId = $request->user()->vendor->id;
+        }
+
+        $query = \App\Models\ProcurementItem::query();
+
+        if ($vendorId) {
+             $query->whereHas('procurement', function($q) use ($vendorId) {
+                $q->where('vendor_id', $vendorId);
+            });
+        }
+
+        $query->where('delivery_status', '!=', 'shipped')
+             ->with([
+                'procurement.vendor',
+                'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
+                'plenaryMeetingItem.item.type',
+            ])
+            ->withSum(['shipmentItems' => function($q) {
+                $q->whereHas('shipment', function($sq) {
+                    $sq->where('status', '!=', 'cancelled');
+                });
+            }], 'quantity');
+            
+        $items = $query->get();
+
+        // Filter items that are ready for shipping
+        $readyItems = $items->filter(function($procItem) {
+             $itemModel = $procItem->plenaryMeetingItem?->item;
+             if ($itemModel && $itemModel->process_type === 'production') {
+                 return $procItem->process_status === 'completed';
+             }
+             return true; 
+        });
+
+        // Group by Cooperative
+        $grouped = $readyItems->groupBy(function($item) {
+            return $item->plenaryMeetingItem->cooperative_id;
+        })->map(function($items, $cooperativeId) {
+            $firstItem = $items->first();
+            $cooperative = $firstItem->plenaryMeetingItem->cooperative;
+            
+            // Build the base cooperative object
+            $entry = $cooperative ? [
+                'id' => $cooperative->id,
+                'name' => $cooperative->name,
+                'code' => $cooperative->code ?? null,
+                'address' => $cooperative->street_address ?? null,
+                'phone' => $cooperative->phone_number ?? null,
+            ] : [
+                'id' => $cooperativeId,
+                'name' => "Unknown Cooperative (ID: $cooperativeId)",
+                'code' => null,
+                'address' => null,
+                'phone' => null,
+            ];
+
+            // Add items directly to the object
+            $entry['items'] = $items->map(function($item) {
+                $shippedQty = $item->shipment_items_sum_quantity ?? 0;
+                $remainingQty = max(0, $item->quantity - $shippedQty);
+
+                if ($remainingQty <= 0) return null;
+
+                return [
+                    'procurement_item_id' => $item->id,
+                    'procurement_id' => $item->procurement_id,
+                    'procurement_number' => $item->procurement->procurement_number,
+                    'vendor_id' => $item->procurement->vendor_id,
+                    'vendor_name' => $item->procurement->vendor->name ?? 'Unknown Vendor', // Info tambahan buat Admin
+                    'item_id' => $item->plenaryMeetingItem->item_id ?? null,
+                    'item_name' => $item->plenaryMeetingItem->item->name ?? 'Unknown Item',
+                    'item_unit' => $item->plenaryMeetingItem->item->unit ?? 'Unit',
+                    'quantity_total' => $item->quantity,
+                    'quantity_shipped' => $shippedQty,
+                    'quantity_remaining' => $remainingQty,
+                    'delivery_status' => $item->delivery_status,
+                ];
+            })->filter()->values();
+            
+            return $entry;
+        })->filter(function($entry) {
+            return $entry['items']->isNotEmpty();
+        })->values();
+
+        return ApiResponse::success('Unshipped items grouped by cooperative', $grouped);
+    }
+
     public function store(Request $request)
     {
         $user = $request->user();
@@ -143,6 +239,7 @@ class ShipmentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'vendor_id' => ($user->role === 'vendor') ? 'nullable' : 'required|exists:vendors,id',
+            'cooperative_id' => 'required|exists:cooperatives,id',
             'tracking_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
@@ -162,6 +259,7 @@ class ShipmentController extends Controller
 
             $shipment = Shipment::create([
                 'vendor_id' => $vendorId,
+                'cooperative_id' => $request->cooperative_id,
                 'tracking_number' => $request->tracking_number,
                 'status' => 'pending',
                 'notes' => $request->notes,

@@ -167,7 +167,22 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->delete('/{id}/delete', 'DocumentTypeController@destroy');
             });
 
+            $router->group(['prefix' => 'production-attributes'], function () use ($router) {
+                $router->get('/', 'ProductionAttributeController@index');
+                $router->get('/{id}/show', 'ProductionAttributeController@show');
+                $router->post('/store', 'ProductionAttributeController@store');
+                $router->put('/{id}/update', 'ProductionAttributeController@update');
+                $router->delete('/{id}/delete', 'ProductionAttributeController@destroy');
+            });
+
+            $router->group(['prefix' => 'production-tracking'], function () use ($router) {
+                $router->get('/items/{id}/timeline', 'ProductionTrackingController@getProductionTimeline');
+                $router->get('/statistics', 'ProductionTrackingController@getProductionStatistics');
+                $router->get('/by-stage', 'ProductionTrackingController@getProductionByStage');
+            });
+
             $router->group(['prefix' => 'shipments'], function () use ($router) {
+                $router->get('/unshipped-items', 'ShipmentController@listUnshippedItems');
                 $router->get('/', 'ShipmentController@index');
                 $router->get('/{id}/show', 'ShipmentController@show');
                 $router->get('/{id}/trackings', 'ShipmentController@trackingHistory');
@@ -183,10 +198,12 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->get('/procurements', 'ProcurementController@index');
             $router->get('/procurements/{id}', 'ProcurementController@show');
             $router->get('/ready-to-ship', 'ProcurementController@readyToShip');
+            $router->get('/production-attributes', 'ProductionAttributeController@index');
             $router->put('/procurements/{id}/delivery-status', 'ProcurementController@updateDeliveryStatus');
             $router->put('/procurements/{id}/process-status', 'ProcurementController@updateProcessStatus');
 
             // Shipment Management for Vendor
+            $router->get('/shipments/unshipped-items', 'ShipmentController@listUnshippedItems');
             $router->get('/shipments', 'ShipmentController@index');
             $router->get('/shipments/{id}', 'ShipmentController@show');
             $router->get('/shipments/{id}/trackings', 'ShipmentController@trackingHistory');

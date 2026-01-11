@@ -13,6 +13,8 @@ class ProductionAttribute extends Model
         'name',
         'slug',
         'description',
+        'sort_order',
+        'default_percentage',
         'is_active',
     ];
 

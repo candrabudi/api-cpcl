@@ -20,6 +20,41 @@ class ProcurementItem extends Model
         'created_by',
     ];
 
+    protected $appends = [
+        'current_percentage', 
+        'current_attribute',
+        'item_name',
+        'item_type_name',
+        'process_type'
+    ];
+
+    public function getCurrentPercentageAttribute()
+    {
+        $latest = $this->processStatuses()->orderBy('id', 'desc')->first();
+        return $latest ? (int)$latest->percentage : 0;
+    }
+
+    public function getCurrentAttributeAttribute()
+    {
+        $latest = $this->processStatuses()->with('productionAttribute')->orderBy('id', 'desc')->first();
+        return $latest && $latest->productionAttribute ? $latest->productionAttribute->name : null;
+    }
+
+    public function getItemNameAttribute()
+    {
+        return $this->item?->name;
+    }
+
+    public function getItemTypeNameAttribute()
+    {
+        return $this->item?->type?->name;
+    }
+
+    public function getProcessTypeAttribute()
+    {
+        return $this->item?->process_type;
+    }
+
     public function procurement()
     {
         return $this->belongsTo(Procurement::class);

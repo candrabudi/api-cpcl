@@ -167,8 +167,13 @@ class InspectionReportController extends Controller
      */
     public function show($id)
     {
-        $report = InspectionReport::with(['items.procurementItem.plenaryMeetingItem.item', 'photos', 'procurement', 'shipment'])
-            ->find($id);
+        $report = InspectionReport::with([
+            'items.procurementItem.item.type', 
+            'items.procurementItem.plenaryMeetingItem.item.type', 
+            'photos', 
+            'procurement', 
+            'shipment'
+        ])->find($id);
 
         if (!$report) {
             return ApiResponse::error('Inspection report not found', 404);

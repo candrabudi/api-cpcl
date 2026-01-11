@@ -38,7 +38,7 @@ class ProcurementController extends Controller
 
         $perPage = min((int) $request->get('per_page', 15), 100);
         
-        $query = Procurement::with(['vendor', 'items.plenaryMeetingItem.item', 'creator'])
+        $query = Procurement::with(['vendor', 'items.item.type', 'items.plenaryMeetingItem.item.type', 'creator'])
             ->orderByDesc('id');
 
         if ($request->get('filter') === 'archived') {
@@ -80,7 +80,8 @@ class ProcurementController extends Controller
             'items' => function ($query) {
                 $query->with([
                     'processStatuses.user',
-                    'plenaryMeetingItem.item',
+                    'item.type',
+                    'plenaryMeetingItem.item.type',
                     'plenaryMeetingItem.cooperative',
                     'plenaryMeeting'
                 ]);
@@ -151,6 +152,8 @@ class ProcurementController extends Controller
                 'annual_budget_id' => $annualBudget->id,
                 'created_by' => Auth::id(),
             ]);
+
+
 
             foreach ($request->items as $item) {
                 $meetingItem = PlenaryMeetingItem::findOrFail($item['plenary_meeting_item_id']);

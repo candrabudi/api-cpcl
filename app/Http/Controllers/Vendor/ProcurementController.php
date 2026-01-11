@@ -97,6 +97,7 @@ class ProcurementController extends Controller
             'items.plenaryMeetingItem.item',
             'items.plenaryMeetingItem.cooperative',
             'items.processStatuses.user',
+            'items.processStatuses.productionAttribute',
             'items.shipmentItems.shipment',
             'vendor'
         ])->where('vendor_id', $vendor->id)->find($id);
@@ -182,7 +183,7 @@ class ProcurementController extends Controller
 
             return ApiResponse::success('Process status updated', $item->load([
                 'plenaryMeetingItem.item',
-                'processStatuses'
+                'processStatuses.productionAttribute'
             ]));
         } catch (\Throwable $e) {
             DB::rollBack();

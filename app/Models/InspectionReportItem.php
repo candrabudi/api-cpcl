@@ -17,6 +17,27 @@ class InspectionReportItem extends Model
         'notes',
     ];
 
+    protected $appends = [
+        'item_name',
+        'item_type_name',
+        'process_type'
+    ];
+
+    public function getItemNameAttribute()
+    {
+        return $this->procurementItem?->item_name;
+    }
+
+    public function getItemTypeNameAttribute()
+    {
+        return $this->procurementItem?->item_type_name;
+    }
+
+    public function getProcessTypeAttribute()
+    {
+        return $this->procurementItem?->process_type;
+    }
+
     public function report()
     {
         return $this->belongsTo(InspectionReport::class, 'inspection_report_id');

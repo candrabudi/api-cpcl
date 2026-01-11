@@ -11,6 +11,7 @@ class Procurement extends Model
     use SoftDeletes;
     protected $fillable = [
         'vendor_id',
+        'cooperative_id',
         'procurement_number',
         'procurement_date',
         'status',
@@ -50,6 +51,11 @@ class Procurement extends Model
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    public function cooperative()
+    {
+        return $this->belongsTo(Cooperative::class);
     }
 
     public function annualBudget()

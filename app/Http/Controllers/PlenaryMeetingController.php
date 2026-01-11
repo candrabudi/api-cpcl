@@ -34,7 +34,7 @@ class PlenaryMeetingController extends Controller
         $perPage = min((int) $request->get('per_page', 15), 100);
         
         $query = PlenaryMeeting::with([
-            'items.item', 
+            'items.item.type', 
             'items.cooperative', 
             'attendees', 
             'creator'
@@ -66,28 +66,69 @@ class PlenaryMeetingController extends Controller
         $adminCheck = $this->checkAdmin($request->user());
         if ($adminCheck) return $adminCheck;
 
-        $perPage = min((int) $request->get('per_page', 15), 100);
-
-        $query = PlenaryMeeting::with([
-            'items' => function ($q) {
-                $q->doesntHave('procurementItem')
-                  ->with(['item', 'cooperative']);
+        // Get all plenary meeting items that haven't been procured yet
+        $query = \App\Models\PlenaryMeetingItem::with([
+            'item.type',
+            'cooperative' => function ($query) {
+                $query->withTrashed();
             },
-            'attendees',
-        ])
-            ->whereHas('items', function ($q) {
-                $q->doesntHave('procurementItem');
-            })
-            ->orderByDesc('id');
+            'meeting',
+            'cpclDocument'
+        ])->doesntHave('procurementItem');
 
-        if ($request->filled('search')) {
-            $search = trim($request->search);
-            $query->where('meeting_title', 'like', "%{$search}%");
-        }
+        // Filter by cooperative if specified
+        // REMOVED as per rollback request
+
+        $unprocuredItems = $query->get();
+
+        // Group by Plenary Meeting
+        $groupedByMeeting = $unprocuredItems->groupBy('plenary_meeting_id')->map(function($items, $meetingId) {
+            $meeting = $items->first()->meeting;
+            
+            // Skip if meeting is null
+            if (!$meeting) {
+                return null;
+            }
+
+            return [
+                'id' => $meeting->id,
+                'meeting_title' => $meeting->meeting_title,
+                'meeting_date' => $meeting->meeting_date,
+                'meeting_time' => $meeting->meeting_time,
+                'location' => $meeting->location,
+                'items' => $items->map(function($item) {
+                     $cooperative = $item->cooperative;
+                     
+                     // Handle cooperative data (with fail-safe for hard deleted)
+                     $cooperativeData = $cooperative ? [
+                        'id' => $cooperative->id,
+                        'name' => $cooperative->name,
+                        'code' => $cooperative->code,
+                     ] : [
+                        'id' => $item->cooperative_id,
+                        'name' => "Unknown Cooperative (ID: {$item->cooperative_id})",
+                        'code' => null
+                     ];
+
+                    return [
+                        'id' => $item->id,
+                        'item_id' => $item->item_id,
+                        'item_name' => $item->item_name,
+                        'item_type_name' => $item->item_type_name,
+                        'process_type' => $item->process_type,
+                        'package_quantity' => $item->package_quantity,
+                        'note' => $item->note,
+                        'cpcl_document_id' => $item->cpcl_document_id,
+                        'cooperative' => $cooperativeData,
+                    ];
+                })->values(),
+                'total_items_count' => $items->count(),
+            ];
+        })->filter()->values(); // Remove null entries and reset keys
 
         return ApiResponse::success(
-            'Plenary meetings with unprocured items retrieved',
-            $query->paginate($perPage)
+            'Unprocured items grouped by plenary meeting',
+            $groupedByMeeting
         );
     }
 
@@ -101,7 +142,7 @@ class PlenaryMeetingController extends Controller
         }
 
         $meeting = PlenaryMeeting::withTrashed()->with([
-            'items.item',
+            'items.item.type',
             'items.cooperative',
             'items.cpclDocument',
             'items.procurementItem.procurement',
@@ -172,6 +213,12 @@ class PlenaryMeetingController extends Controller
                     'note' => $item['note'] ?? null,
                     'location' => $item['location'] ?? null,
                 ]);
+
+                // Update CpclDocument status to approved automatically
+                if (!empty($item['cpcl_document_id'])) {
+                    \App\Models\CpclDocument::where('id', $item['cpcl_document_id'])
+                        ->update(['status' => 'approved']);
+                }
             }
 
             if ($request->filled('attendees')) {
@@ -274,6 +321,11 @@ class PlenaryMeetingController extends Controller
                     'note' => $item['note'] ?? null,
                     'location' => $item['location'] ?? null,
                 ]);
+
+                if (!empty($item['cpcl_document_id'])) {
+                    \App\Models\CpclDocument::where('id', $item['cpcl_document_id'])
+                        ->update(['status' => 'approved']);
+                }
             }
 
             $meeting->attendees()->delete();

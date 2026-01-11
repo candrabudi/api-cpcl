@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\ShipmentStatusLog;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -217,7 +218,7 @@ class ShipmentController extends Controller
                 'longitude' => $request->longitude,
                 'area_id' => $request->area_id,
                 'created_by' => $user->id,
-                'changed_at' => now(),
+                'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();
@@ -303,13 +304,13 @@ class ShipmentController extends Controller
             }
 
             if ($request->status === 'shipped' && !$shipment->shipped_at) {
-                $shipment->shipped_at = now();
+                $shipment->shipped_at = Carbon::now();
             }
             if ($request->status === 'delivered' && !$shipment->delivered_at) {
-                $shipment->delivered_at = now();
+                $shipment->delivered_at = Carbon::now();
             }
             if ($request->status === 'received' && !$shipment->received_at) {
-                $shipment->received_at = now();
+                $shipment->received_at = Carbon::now();
             }
             
             $shipment->save();
@@ -322,7 +323,7 @@ class ShipmentController extends Controller
                 'longitude' => $request->longitude,
                 'area_id' => $request->area_id,
                 'created_by' => Auth::id(),
-                'changed_at' => now(),
+                'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();

@@ -147,7 +147,7 @@ class ShipmentController extends Controller
         $query->where('delivery_status', '!=', 'shipped')
              ->with([
                 'procurement.vendor',
-                'plenaryMeetingItem.cooperative.area', // Load Area
+                'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
                 'plenaryMeetingItem.item.type',
             ])
             ->withSum(['shipmentItems' => function($q) {
@@ -167,24 +167,26 @@ class ShipmentController extends Controller
              return true; 
         });
 
-        // Group by Cooperative AREA ID
+        // Group by Cooperative
         $grouped = $readyItems->groupBy(function($item) {
-            return $item->plenaryMeetingItem->cooperative->area_id ?? 0;
-        })->map(function($items, $areaId) {
+            return $item->plenaryMeetingItem->cooperative_id;
+        })->map(function($items, $cooperativeId) {
             $firstItem = $items->first();
-            $area = $firstItem->plenaryMeetingItem->cooperative->area ?? null;
+            $cooperative = $firstItem->plenaryMeetingItem->cooperative;
             
-            // Build the base AREA object
-            $entry = $area ? [
-                'id' => $area->id,
-                'name' => $area->name,
-                'code' => $area->code ?? null,
-                'regency' => $area->regency_name ?? null, 
-                // Add more area fields if needed
+            // Build the base cooperative object
+            $entry = $cooperative ? [
+                'id' => $cooperative->id,
+                'name' => $cooperative->name,
+                'code' => $cooperative->code ?? null,
+                'address' => $cooperative->street_address ?? null,
+                'phone' => $cooperative->phone_number ?? null,
             ] : [
-                'id' => $areaId, // 0 usually
-                'name' => "Unknown Area / No Area Assigned",
+                'id' => $cooperativeId,
+                'name' => "Unknown Cooperative (ID: $cooperativeId)",
                 'code' => null,
+                'address' => null,
+                'phone' => null,
             ];
 
             // Add items directly to the object
@@ -194,15 +196,12 @@ class ShipmentController extends Controller
 
                 if ($remainingQty <= 0) return null;
 
-                $coop = $item->plenaryMeetingItem->cooperative;
-
                 return [
                     'procurement_item_id' => $item->id,
                     'procurement_id' => $item->procurement_id,
                     'procurement_number' => $item->procurement->procurement_number,
                     'vendor_id' => $item->procurement->vendor_id,
                     'vendor_name' => $item->procurement->vendor->name ?? 'Unknown Vendor',
-                    'cooperative_name' => $coop->name ?? 'Unknown Cooperative', // Info tambahan
                     'item_id' => $item->plenaryMeetingItem->item_id ?? null,
                     'item_name' => $item->plenaryMeetingItem->item->name ?? 'Unknown Item',
                     'item_unit' => $item->plenaryMeetingItem->item->unit ?? 'Unit',
@@ -218,7 +217,7 @@ class ShipmentController extends Controller
             return $entry['items']->isNotEmpty();
         })->values();
 
-        return ApiResponse::success('Unshipped items grouped by area', $grouped);
+        return ApiResponse::success('Unshipped items grouped by cooperative', $grouped);
     }
 
     public function store(Request $request)
@@ -240,12 +239,10 @@ class ShipmentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'vendor_id' => ($user->role === 'vendor') ? 'nullable' : 'required|exists:vendors,id',
-            'cooperative_id' => 'required|exists:cooperatives,id',
             'tracking_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'area_id' => 'nullable|exists:areas,id',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
             'items.*.quantity' => 'nullable|integer|min:1',
@@ -260,10 +257,11 @@ class ShipmentController extends Controller
 
             $shipment = Shipment::create([
                 'vendor_id' => $vendorId,
-                'cooperative_id' => $request->cooperative_id,
                 'tracking_number' => $request->tracking_number,
                 'status' => 'pending',
                 'notes' => $request->notes,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
                 'created_by' => $user->id,
             ]);
 

@@ -1,13 +1,16 @@
 # Shipment Store API Documentation
 
 Dokumentasi ini mencakup dua skenario penggunaan API pembuatan pengiriman (Shipment):
-1.  **Mobile Vendor**: Digunakan oleh aplikasi mobile vendor (hanya bisa kirim data vendor sendiri).
-2.  **Web Admin/Backoffice**: Digunakan oleh dashboard admin (bisa kirim data atas nama vendor manapun).
+1.  **Mobile Vendor**: Digunakan oleh aplikasi mobile vendor.
+2.  **Web Admin/Backoffice**: Digunakan oleh dashboard admin.
 
-## Endpoint List Unshipped Items (Preparation)
-`GET /mobile/vendor/shipments/unshipped-items`
+## Konsep Pengiriman
+Pengiriman tidak lagi terikat secara ketat dengan ID Koperasi atau Area di database level. Pengiriman hanya mencatat:
+1.  **Vendor** (Pengirim)
+2.  **Lokasi dropship** (Latitude & Longitude)
+3.  **Daftar Barang**
 
-Endpoint ini mengelompokkan item berdasarkan **AREA** (bukan Koperasi).
+Namun, untuk memudahkan user memilih barang, endpoint `listUnshippedItems` tetap mengelompokkan barang berdasarkan **Koperasi** asal barang tersebut.
 
 ---
 
@@ -24,9 +27,10 @@ curl -X POST "http://localhost:8000/api/mobile/vendor/shipments/store" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "area_id": 1,
     "tracking_number": "TRK-MBL-001",
-    "notes": "Pengiriman ke Area Jawa Barat",
+    "notes": "Pengiriman ke titik koordinat",
+    "latitude": -6.2088,
+    "longitude": 106.8456,
     "items": [
         {
             "procurement_item_id": 105,
@@ -37,12 +41,14 @@ curl -X POST "http://localhost:8000/api/mobile/vendor/shipments/store" \
 ```
 
 **Payload Details:**
-*   `area_id`: **Wajib**. ID Area tujuan (misal: ID Area untuk Jawa Barat). Item yang dikirim harus berasal dari koperasi yang berlokasi di area ini.
+*   `latitude`: **Opsional**. Koordinat Lintang lokasi pengiriman.
+*   `longitude`: **Opsional**. Koordinat Bujur lokasi pengiriman.
 *   `items`: Array item yang dikirim.
     *   `procurement_item_id`: ID Item Pengadaan.
     *   `quantity`: Jumlah yang dikirim.
 *   `tracking_number`: Opsional.
 *   `notes`: Catatan Opsional.
+*   **TIDAK ADA** field `cooperative_id` atau `area_id`.
 
 ---
 
@@ -60,9 +66,10 @@ curl -X POST "http://localhost:8000/api/shipments/store" \
   -H "Accept: application/json" \
   -d '{
     "vendor_id": 5, 
-    "area_id": 1,
     "tracking_number": "TRK-ADM-999",
     "notes": "Pengiriman dibuat oleh Admin",
+    "latitude": -6.2088,
+    "longitude": 106.8456,
     "items": [
         {
             "procurement_item_id": 105,
@@ -74,4 +81,4 @@ curl -X POST "http://localhost:8000/api/shipments/store" \
 
 **Payload Details:**
 *   `vendor_id`: **Wajib**. ID Vendor pemilik barang.
-*   `area_id`: **Wajib**. ID Area tujuan.
+*   `latitude` & `longitude`: Opsional.

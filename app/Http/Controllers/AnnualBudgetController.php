@@ -171,11 +171,8 @@ class AnnualBudgetController extends Controller
                 return ApiResponse::validationError($validator->errors()->toArray());
             }
 
-            $oldTotal = $budget->total_budget;
-            $budget->update([
-                'total_budget' => $request->total_budget,
-                'remaining_budget' => $request->total_budget - $budget->used_budget,
-            ]);
+            $budget->total_budget = $request->total_budget;
+            $budget->recalculateBalances();
 
             DB::commit();
 

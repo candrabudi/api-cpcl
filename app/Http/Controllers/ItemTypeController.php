@@ -214,6 +214,12 @@ class ItemTypeController extends Controller
                 'used_amount' => 0,
             ]);
 
+            // Trigger annual budget recalculation
+            $annualBudget = \App\Models\AnnualBudget::where('budget_year', $request->year)->first();
+            if ($annualBudget) {
+                $annualBudget->recalculateBalances();
+            }
+
             DB::commit();
 
             return ApiResponse::success('Budget created', $budget, 201);
@@ -268,6 +274,13 @@ class ItemTypeController extends Controller
             $budget->update([
                 'amount' => $request->amount,
             ]);
+
+            // Trigger annual budget recalculation
+            $annualBudget = \App\Models\AnnualBudget::where('budget_year', $budget->year)->first();
+            if ($annualBudget) {
+                $annualBudget->recalculateBalances();
+            }
+
             DB::commit();
 
             return ApiResponse::success('Budget updated', $budget);

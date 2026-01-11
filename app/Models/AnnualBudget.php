@@ -25,4 +25,18 @@ class AnnualBudget extends Model
     {
         return $this->hasMany(Procurement::class);
     }
+
+    public function recalculateBalances()
+    {
+        $totalSpent = ProcurementItem::whereHas('procurement', function ($q) {
+            $q->where('annual_budget_id', $this->id);
+        })->sum('total_price');
+
+        $totalAllocated = ItemTypeBudget::where('year', $this->budget_year)->sum('amount');
+
+        $this->used_budget = $totalSpent;
+        $this->allocated_budget = $totalAllocated;
+        $this->remaining_budget = $this->total_budget - $totalAllocated;
+        $this->save();
+    }
 }

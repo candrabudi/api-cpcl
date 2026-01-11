@@ -30,34 +30,6 @@ class ProcurementController extends Controller
         return null;
     }
 
-    private function recalcBudget(Procurement $procurement): void
-    {
-        $budget = AnnualBudget::find($procurement->annual_budget_id ?? null);
-        if (!$budget) {
-            \Log::warning('Budget not found for procurement', [
-                'procurement_id' => $procurement->id,
-                'annual_budget_id' => $procurement->annual_budget_id,
-            ]);
-            return;
-        }
-
-        $totalSpent = ProcurementItem::whereHas('procurement', function ($q) use ($budget) {
-            $q->where('annual_budget_id', $budget->id);
-        })->sum('total_price');
-
-        $totalAllocated = ItemTypeBudget::where('year', $budget->budget_year)->sum('amount');
-
-        $budget->used_budget = $totalSpent;
-        $budget->allocated_budget = $totalAllocated;
-        $budget->remaining_budget = $budget->total_budget - $totalAllocated;
-        $budget->save();
-
-        \Log::debug('Budget recalculated', [
-            'budget_id' => $budget->id,
-            'total_spent' => $totalSpent,
-            'remaining' => $budget->remaining_budget,
-        ]);
-    }
 
     public function index(Request $request)
     {
@@ -124,7 +96,7 @@ class ProcurementController extends Controller
 
         try {
             DB::beginTransaction();
-            $this->recalcBudget($procurement);
+            $procurement->annualBudget?->recalculateBalances();
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -232,7 +204,7 @@ class ProcurementController extends Controller
                 }
             }
 
-            $this->recalcBudget($procurement);
+            $procurement->annualBudget?->recalculateBalances();
 
             DB::commit();
 
@@ -340,7 +312,7 @@ class ProcurementController extends Controller
                 }
             }
 
-            $this->recalcBudget($procurement);
+            $procurement->annualBudget?->recalculateBalances();
 
             DB::commit();
 
@@ -369,7 +341,7 @@ class ProcurementController extends Controller
             DB::beginTransaction();
 
             $procurement->delete();
-            $this->recalcBudget($procurement);
+            $procurement->annualBudget?->recalculateBalances();
 
             DB::commit();
 

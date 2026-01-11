@@ -31,7 +31,16 @@ class ItemTypeBudget extends Model
     protected static function booted()
     {
         static::created(function ($itemTypeBudget) {
-            $annualBudget = AnnualBudget::where('budget_year', $itemTypeBudget->year)->first();
+            $annualBudget = AnnualBudget::firstOrCreate(
+                ['budget_year' => $itemTypeBudget->year],
+                [
+                    'total_budget' => 0,
+                    'used_budget' => 0,
+                    'allocated_budget' => 0,
+                    'remaining_budget' => 0
+                ]
+            );
+            
             if ($annualBudget) {
                 // Log for visibility
                 AnnualBudgetLog::create([
@@ -57,7 +66,16 @@ class ItemTypeBudget extends Model
 
         static::updated(function ($itemTypeBudget) {
             if ($itemTypeBudget->isDirty('amount')) {
-                $annualBudget = AnnualBudget::where('budget_year', $itemTypeBudget->year)->first();
+                $annualBudget = AnnualBudget::firstOrCreate(
+                    ['budget_year' => $itemTypeBudget->year],
+                    [
+                        'total_budget' => 0,
+                        'used_budget' => 0,
+                        'allocated_budget' => 0,
+                        'remaining_budget' => 0
+                    ]
+                );
+                
                 if ($annualBudget) {
                     $oldAmount = $itemTypeBudget->getOriginal('amount');
                     $newAmount = $itemTypeBudget->amount;

@@ -149,7 +149,7 @@ class ShipmentController extends Controller
             'area_id' => 'nullable|exists:areas,id',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -177,13 +177,36 @@ class ShipmentController extends Controller
                             throw new \Exception("Item '{$itemModel->name}' cannot be shipped. Production process is not yet completed (current status: {$procurementItem->process_status}).");
                         }
                     }
-                }
 
-                ShipmentItem::create([
-                    'shipment_id' => $shipment->id,
-                    'procurement_item_id' => $itemData['procurement_item_id'],
-                    'quantity' => $itemData['quantity'],
-                ]);
+                    // Automatically use remaining quantity or requested quantity
+                    $totalShipped = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
+                        ->whereHas('shipment', function($q) {
+                            $q->where('status', '!=', 'cancelled');
+                        })
+                        ->sum('quantity');
+                    
+                    $remainingQty = $procurementItem->quantity - $totalShipped;
+                    $quantityToShip = $itemData['quantity'] ?? $remainingQty;
+
+                    if ($quantityToShip <= 0) {
+                        throw new \Exception("Item '{$itemModel->name}' has no remaining quantity to ship.");
+                    }
+
+                    if ($quantityToShip > $remainingQty) {
+                        throw new \Exception("Requested quantity for '{$itemModel->name}' exceed remaining quantity ({$remainingQty}).");
+                    }
+
+                    ShipmentItem::create([
+                        'shipment_id' => $shipment->id,
+                        'procurement_item_id' => $procurementItem->id,
+                        'quantity' => $quantityToShip,
+                    ]);
+
+                    // Update delivery status
+                    $newTotalShipped = $totalShipped + $quantityToShip;
+                    $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
+                    $procurementItem->update(['delivery_status' => $newDeliveryStatus]);
+                }
             }
 
             ShipmentStatusLog::create([

@@ -138,6 +138,9 @@ class ShipmentController extends Controller
 
                 // Automatically use remaining quantity
                 $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
+                    ->whereHas('shipment', function($q) {
+                        $q->where('status', '!=', 'cancelled');
+                    })
                     ->sum('quantity');
                 $remainingQty = $procurementItem->quantity - $shippedQty;
 
@@ -151,8 +154,10 @@ class ShipmentController extends Controller
                     'quantity' => $remainingQty,
                 ]);
 
-                // Update procurement item status fixed as fully shipped since we take all remaining
-                $procurementItem->update(['delivery_status' => 'shipped']);
+                // Update procurement item delivery status
+                $newTotalShipped = $shippedQty + $remainingQty;
+                $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
+                $procurementItem->update(['delivery_status' => $newDeliveryStatus]);
             }
 
             ShipmentStatusLog::create([

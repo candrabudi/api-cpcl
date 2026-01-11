@@ -214,10 +214,10 @@ class ItemTypeController extends Controller
                 'used_amount' => 0,
             ]);
 
-            // Trigger annual budget recalculation
             $annualBudget = \App\Models\AnnualBudget::where('budget_year', $request->year)->first();
             if ($annualBudget) {
                 $annualBudget->recalculateBalances();
+                $annualBudget->refresh();
             }
 
             DB::commit();
@@ -275,10 +275,10 @@ class ItemTypeController extends Controller
                 'amount' => $request->amount,
             ]);
 
-            // Trigger annual budget recalculation
             $annualBudget = \App\Models\AnnualBudget::where('budget_year', $budget->year)->first();
             if ($annualBudget) {
                 $annualBudget->recalculateBalances();
+                $annualBudget->refresh();
             }
 
             DB::commit();

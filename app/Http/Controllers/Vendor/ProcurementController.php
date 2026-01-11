@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\ProcurementItem;
 use App\Models\ProcurementItemProcessStatus;
+use App\Models\ProductionAttribute;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -135,7 +136,7 @@ class ProcurementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'process_status' => 'required|in:pending,purchase,production,completed',
+            'process_status' => 'required|in:pending,process,production,completed',
             'production_attribute_id' => 'nullable|exists:production_attributes,id',
             'percentage' => 'nullable|integer|min:0|max:100',
             'production_start_date' => 'nullable|date',
@@ -148,15 +149,28 @@ class ProcurementController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        // Logic check: Percentage cannot decrease
-        if ($request->filled('percentage')) {
-            $latestStatus = \App\Models\ProcurementItemProcessStatus::where('procurement_item_id', $item->id)
-                ->orderBy('id', 'desc')
-                ->first();
-            
-            if ($latestStatus && (int)$request->percentage < (int)$latestStatus->percentage) {
-                return ApiResponse::error('Percentage cannot be lower than the previous record (' . $latestStatus->percentage . '%)', 400);
+        $percentage = $request->percentage ?? 0;
+
+        // Take percentage from production attribute if provided
+        if ($request->filled('production_attribute_id')) {
+            $attribute = ProductionAttribute::find($request->production_attribute_id);
+            if ($attribute) {
+                // Validate that this attribute belongs to the correct item type
+                $itemTypeId = $item->plenaryMeetingItem->item->item_type_id;
+                if ($attribute->item_type_id !== null && $attribute->item_type_id != $itemTypeId) {
+                    return ApiResponse::error('Invalid attribute: This attribute does not belong to the item type.', 400);
+                }
+                $percentage = $attribute->default_percentage;
             }
+        }
+
+        // Logic check: Percentage cannot decrease
+        $latestStatus = \App\Models\ProcurementItemProcessStatus::where('procurement_item_id', $item->id)
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        if ($latestStatus && (int)$percentage < (int)$latestStatus->percentage) {
+            return ApiResponse::error('Percentage cannot be lower than the previous record (' . $latestStatus->percentage . '%)', 400);
         }
 
         try {
@@ -166,11 +180,18 @@ class ProcurementController extends Controller
             $item->process_status = $request->process_status;
             $item->save();
 
+            // Auto-update parent procurement status from 'draft' to 'processed'
+            $procurement = $item->procurement;
+            if ($procurement && $procurement->status === 'draft') {
+                $procurement->update(['status' => 'processed']);
+                \Log::info("Procurement {$procurement->procurement_number} status auto-updated to 'processed' due to item process update.");
+            }
+
             ProcurementItemProcessStatus::create([
                 'procurement_item_id' => $item->id,
                 'production_attribute_id' => $request->production_attribute_id,
                 'status' => $request->process_status,
-                'percentage' => $request->percentage ?? 0,
+                'percentage' => $percentage,
                 'production_start_date' => $request->production_start_date ?? null,
                 'production_end_date' => $request->production_end_date ?? null,
                 'area_id' => $request->area_id ?? null,
@@ -254,6 +275,9 @@ class ProcurementController extends Controller
             $q->where('process_status', 'completed')
               ->orWhereHas('processStatuses', function ($subQ) {
                   $subQ->where('percentage', 100);
+              })
+              ->orWhereHas('plenaryMeetingItem.item', function ($subQ) {
+                  $subQ->where('process_type', 'purchase');
               });
         })
         ->where('delivery_status', 'pending')

@@ -224,6 +224,12 @@ class InspectionReportController extends Controller
                 'status' => $request->get('complete', false) ? 'completed' : 'draft',
             ]);
 
+            // Auto-update parent procurement to 'completed' if report is finalized
+            if ($report->status === 'completed' && $report->procurement) {
+                $report->procurement->update(['status' => 'completed']);
+                \Log::info("Procurement {$report->procurement->procurement_number} marked as COMPLETED via Inspection Report #{$report->report_number}");
+            }
+
             // Update Checklist Items
             foreach ($request->items as $itemData) {
                 $item = InspectionReportItem::where('inspection_report_id', $report->id)

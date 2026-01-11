@@ -10,6 +10,7 @@ class ProductionAttribute extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'item_type_id',
         'name',
         'slug',
         'description',
@@ -17,6 +18,11 @@ class ProductionAttribute extends Model
         'default_percentage',
         'is_active',
     ];
+
+    public function itemType()
+    {
+        return $this->belongsTo(ItemType::class);
+    }
 
     public function processStatuses()
     {

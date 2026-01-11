@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class ItemController extends Controller
 {
@@ -33,7 +34,11 @@ class ItemController extends Controller
 
         try {
             $perPage = min((int) $request->get('per_page', 15), 100);
-            $query = Item::with('type')->orderByDesc('id');
+            $currentYear = Carbon::now()->year;
+
+            $query = Item::with(['type.budgets' => function($q) use ($currentYear) {
+                $q->where('year', $currentYear);
+            }])->orderByDesc('id');
 
             if ($request->get('filter') === 'archived') {
                 $query->onlyTrashed();
@@ -55,6 +60,24 @@ class ItemController extends Controller
             }
 
             $items = $query->paginate($perPage);
+
+            $items->getCollection()->transform(function($item) {
+                $type = $item->type;
+                if ($type) {
+                    $budget = $type->budgets->first();
+                    $item->item_type_name = $type->name;
+                    $item->remaining_budget = $budget ? (float)($budget->amount - $budget->used_amount) : 0;
+                    
+                    // Safely remove the relation to keep response clean
+                    $type->unsetRelation('budgets');
+                } else {
+                    $item->item_type_name = null;
+                    $item->remaining_budget = 0;
+                }
+                
+                return $item;
+            });
+
             return ApiResponse::success('Items retrieved', $items);
         } catch (\Throwable $e) {
             \Log::error('Failed to retrieve items', [

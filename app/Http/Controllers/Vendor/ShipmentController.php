@@ -106,6 +106,7 @@ class ShipmentController extends Controller
                 'procurement',
                 'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
                 'plenaryMeetingItem.item.type',
+                'processStatuses',
             ])
             ->withSum(['shipmentItems' => function($q) {
                 $q->whereHas('shipment', function($sq) {
@@ -119,7 +120,7 @@ class ShipmentController extends Controller
         $readyItems = $items->filter(function($procItem) {
              $itemModel = $procItem->plenaryMeetingItem?->item;
              if ($itemModel && $itemModel->process_type === 'production') {
-                 return $procItem->process_status === 'completed';
+                 return $procItem->process_status === 'completed' || $procItem->processStatuses->where('percentage', 100)->count() > 0;
              }
              return true; 
         });
@@ -201,8 +202,8 @@ class ShipmentController extends Controller
             $shipment = Shipment::create([
                 'vendor_id' => $vendor->id,
                 'tracking_number' => $request->tracking_number,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'latitude' => $request->filled('latitude') ? $request->latitude : null,
+                'longitude' => $request->filled('longitude') ? $request->longitude : null,
                 'status' => 'pending',
                 'notes' => $request->notes,
                 'created_by' => Auth::id(),
@@ -256,6 +257,12 @@ class ShipmentController extends Controller
                     'quantity' => $quantityToShip,
                 ]);
 
+                // Auto-update parent procurement status from 'draft' to 'processed'
+                $parentProcurement = $procurementItem->procurement;
+                if ($parentProcurement && $parentProcurement->status === 'draft') {
+                    $parentProcurement->update(['status' => 'processed']);
+                }
+
                 // Update procurement item delivery status
                 $newTotalShipped = $shippedQty + $quantityToShip;
                 $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
@@ -266,8 +273,8 @@ class ShipmentController extends Controller
                 'shipment_id' => $shipment->id,
                 'status' => 'pending',
                 'notes' => 'Shipment created via Mobile',
-                'latitude' => $request->latitude ?? null, 
-                'longitude' => $request->longitude ?? null,
+                'latitude' => $request->filled('latitude') ? $request->latitude : null,
+                'longitude' => $request->filled('longitude') ? $request->longitude : null,
                 // 'area_id' => null, // Log area_id removed 
                 'created_by' => Auth::id(),
                 'changed_at' => Carbon::now(),

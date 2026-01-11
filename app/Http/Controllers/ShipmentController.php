@@ -6,6 +6,9 @@ use App\Helpers\ApiResponse;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\ShipmentStatusLog;
+use App\Models\Procurement;
+use App\Models\InspectionReport;
+use App\Models\InspectionReportItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,10 +148,11 @@ class ShipmentController extends Controller
         }
 
         $query->where('delivery_status', '!=', 'shipped')
-             ->with([
+            ->with([
                 'procurement.vendor',
                 'plenaryMeetingItem.cooperative' => function($q) { $q->withTrashed(); },
                 'plenaryMeetingItem.item.type',
+                'processStatuses',
             ])
             ->withSum(['shipmentItems' => function($q) {
                 $q->whereHas('shipment', function($sq) {
@@ -159,10 +163,11 @@ class ShipmentController extends Controller
         $items = $query->get();
 
         // Filter items that are ready for shipping
+        // Filter items that are ready for shipping
         $readyItems = $items->filter(function($procItem) {
              $itemModel = $procItem->plenaryMeetingItem?->item;
              if ($itemModel && $itemModel->process_type === 'production') {
-                 return $procItem->process_status === 'completed';
+                 return $procItem->process_status === 'completed' || $procItem->processStatuses->where('percentage', 100)->count() > 0;
              }
              return true; 
         });
@@ -260,8 +265,8 @@ class ShipmentController extends Controller
                 'tracking_number' => $request->tracking_number,
                 'status' => 'pending',
                 'notes' => $request->notes,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'latitude' => $request->filled('latitude') ? $request->latitude : null,
+                'longitude' => $request->filled('longitude') ? $request->longitude : null,
                 'created_by' => $user->id,
             ]);
 
@@ -300,6 +305,12 @@ class ShipmentController extends Controller
                         'quantity' => $quantityToShip,
                     ]);
 
+                    // Auto-update parent procurement status from 'draft' to 'processed'
+                    $parentProcurement = $procurementItem->procurement;
+                    if ($parentProcurement && $parentProcurement->status === 'draft') {
+                        $parentProcurement->update(['status' => 'processed']);
+                    }
+
                     // Update delivery status
                     $newTotalShipped = $totalShipped + $quantityToShip;
                     $newDeliveryStatus = ($newTotalShipped >= $procurementItem->quantity) ? 'shipped' : 'partially_shipped';
@@ -311,8 +322,8 @@ class ShipmentController extends Controller
                 'shipment_id' => $shipment->id,
                 'status' => 'pending',
                 'notes' => 'Shipment created',
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'latitude' => $request->filled('latitude') ? $request->latitude : null,
+                'longitude' => $request->filled('longitude') ? $request->longitude : null,
                 'area_id' => $request->area_id,
                 'created_by' => $user->id,
                 'changed_at' => Carbon::now(),
@@ -422,6 +433,72 @@ class ShipmentController extends Controller
                 'created_by' => Auth::id(),
                 'changed_at' => Carbon::now(),
             ]);
+
+            // Automatically create BA Pemeriksaan (Inspection Report) if all items in procurement are received
+            if ($request->status === 'received') {
+                $procurementIds = $shipment->items()->with('procurementItem')
+                    ->get()
+                    ->pluck('procurementItem.procurement_id')
+                    ->unique();
+
+                foreach ($procurementIds as $procId) {
+                    $procurement = Procurement::with('items')->find($procId);
+                    if (!$procurement) continue;
+
+                    // Check if BA already exists for this procurement
+                    $exists = InspectionReport::where('procurement_id', $procId)->exists();
+                    if ($exists) continue;
+
+                    // Check if all items in this procurement are fully received
+                    $allReceived = true;
+                    foreach ($procurement->items as $procItem) {
+                        $totalReceived = ShipmentItem::where('procurement_item_id', $procItem->id)
+                            ->whereHas('shipment', function($q) {
+                                $q->where('status', 'received');
+                            })->sum('quantity');
+
+                        if ($totalReceived < $procItem->quantity) {
+                            $allReceived = false;
+                            break;
+                        }
+                    }
+
+                    if ($allReceived) {
+                        $reportNumber = 'BAP/' . Carbon::now()->format('Ymd') . '/' . $procurement->procurement_number;
+                        
+                        // Ensure unique report number
+                        $count = 1;
+                        $originalReportNumber = $reportNumber;
+                        while(InspectionReport::where('report_number', $reportNumber)->exists()) {
+                            $reportNumber = $originalReportNumber . '-' . $count;
+                            $count++;
+                        }
+
+                        $report = InspectionReport::create([
+                            'procurement_id' => $procId,
+                            'shipment_id' => $shipment->id,
+                            'report_number' => $reportNumber,
+                            'inspection_date' => Carbon::now(),
+                            'status' => 'draft',
+                            'created_by' => Auth::id(),
+                            'notes' => 'Otomatis dibuat setelah semua item pengadaan diterima.',
+                        ]);
+
+                        foreach ($procurement->items as $procItem) {
+                            InspectionReportItem::create([
+                                'inspection_report_id' => $report->id,
+                                'procurement_item_id' => $procItem->id,
+                                'expected_quantity' => $procItem->quantity,
+                                'actual_quantity' => $procItem->quantity, // Pre-fill with expected
+                                'is_matched' => true,
+                                'condition' => 'Good',
+                            ]);
+                        }
+
+                        \Log::info("Auto-created Inspection Report for Procurement: {$procurement->procurement_number}");
+                    }
+                }
+            }
 
             DB::commit();
 

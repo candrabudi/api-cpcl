@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\ProcurementItem;
+use App\Models\ItemTypeBudget;
 
 class AnnualBudget extends Model
 {
@@ -28,14 +30,10 @@ class AnnualBudget extends Model
 
     public function recalculateBalances()
     {
-        $totalSpent = ProcurementItem::whereHas('procurement', function ($q) {
-            $q->where('annual_budget_id', $this->id);
-        })->sum('total_price');
-
         $totalAllocated = ItemTypeBudget::where('year', $this->budget_year)->sum('amount');
-
-        $this->used_budget = $totalSpent;
         $this->allocated_budget = $totalAllocated;
+        $this->used_budget = $totalAllocated;
+        
         $this->remaining_budget = $this->total_budget - $totalAllocated;
         $this->save();
     }

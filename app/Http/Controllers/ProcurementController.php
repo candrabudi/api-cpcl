@@ -186,15 +186,29 @@ class ProcurementController extends Controller
                     'created_by' => Auth::id(),
                 ]);
 
-                $itemTypeBudget = ItemTypeBudget::where('item_type_id', $meetingItem->item_id)
+                $itemTypeBudget = ItemTypeBudget::where('item_type_id', $meetingItem->item->item_type_id)
                     ->where('year', $annualBudget->budget_year)
                     ->first();
 
+                if (!$itemTypeBudget) {
+                    throw new \Exception("Budget for item type: " . ($meetingItem->item->type->name ?? 'Unknown') . " not found for year {$annualBudget->budget_year}");
+                }
+
+                $availableBudget = $itemTypeBudget->amount - $itemTypeBudget->used_amount;
+                if ($availableBudget < $totalPrice) {
+                    throw new \Exception("Insufficient budget for " . ($meetingItem->item->type->name ?? 'item type') . ". Available: " . number_format($availableBudget) . ", Required: " . number_format($totalPrice));
+                }
+
                 AnnualBudgetTransaction::create([
                     'annual_budget_id' => $annualBudget->id,
-                    'item_type_budget_id' => $itemTypeBudget?->id,
+                    'item_type_budget_id' => $itemTypeBudget->id,
                     'procurement_item_id' => $procItem->id,
+                    'item_id' => $meetingItem->item_id,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'type' => 'spending',
                     'amount' => $totalPrice,
+                    'notes' => "Procurement for " . ($meetingItem->item->name ?? 'item'),
                 ]);
 
                 if ($processType === 'production') {
@@ -294,15 +308,29 @@ class ProcurementController extends Controller
                     'created_by' => Auth::id(),
                 ]);
 
-                $itemTypeBudget = ItemTypeBudget::where('item_type_id', $meetingItem->item_id)
+                $itemTypeBudget = ItemTypeBudget::where('item_type_id', $meetingItem->item->item_type_id)
                     ->where('year', $annualBudget->budget_year)
                     ->first();
 
+                if (!$itemTypeBudget) {
+                    throw new \Exception("Budget for item type: " . ($meetingItem->item->type->name ?? 'Unknown') . " not found for year {$annualBudget->budget_year}");
+                }
+
+                $availableBudget = $itemTypeBudget->amount - $itemTypeBudget->used_amount;
+                if ($availableBudget < $totalPrice) {
+                    throw new \Exception("Insufficient budget for " . ($meetingItem->item->type->name ?? 'item type') . ". Available: " . number_format($availableBudget) . ", Required: " . number_format($totalPrice));
+                }
+
                 AnnualBudgetTransaction::create([
                     'annual_budget_id' => $annualBudget->id,
-                    'item_type_budget_id' => $itemTypeBudget?->id,
+                    'item_type_budget_id' => $itemTypeBudget->id,
                     'procurement_item_id' => $procItem->id,
+                    'item_id' => $meetingItem->item_id,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'type' => 'spending',
                     'amount' => $totalPrice,
+                    'notes' => "Procurement for " . ($meetingItem->item->name ?? 'item'),
                 ]);
 
                 if ($processType === 'production') {

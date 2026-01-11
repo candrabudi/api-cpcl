@@ -25,6 +25,10 @@ class ProductionAttributeController extends Controller
 
         $query = ProductionAttribute::orderBy('sort_order')->orderBy('id');
 
+        if ($request->filled('item_type_id')) {
+            $query->where('item_type_id', $request->item_type_id);
+        }
+
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where('name', 'like', "%$search%");
@@ -43,6 +47,7 @@ class ProductionAttributeController extends Controller
         if ($adminCheck) return $adminCheck;
 
         $validator = Validator::make($request->all(), [
+            'item_type_id' => 'required|exists:item_types,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'sort_order' => 'nullable|integer',
@@ -55,6 +60,7 @@ class ProductionAttributeController extends Controller
         }
 
         $attribute = ProductionAttribute::create([
+            'item_type_id' => $request->item_type_id,
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
@@ -90,6 +96,7 @@ class ProductionAttributeController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'item_type_id' => 'sometimes|required|exists:item_types,id',
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'sort_order' => 'nullable|integer',
@@ -101,7 +108,7 @@ class ProductionAttributeController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        $data = $request->only(['name', 'description', 'sort_order', 'default_percentage', 'is_active']);
+        $data = $request->only(['item_type_id', 'name', 'description', 'sort_order', 'default_percentage', 'is_active']);
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
         }

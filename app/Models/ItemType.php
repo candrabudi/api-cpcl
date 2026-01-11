@@ -22,4 +22,9 @@ class ItemType extends Model
     {
         return $this->hasMany(ItemTypeBudget::class);
     }
+
+    public function productionAttributes()
+    {
+        return $this->hasMany(ProductionAttribute::class)->orderBy('sort_order')->orderBy('id');
+    }
 }

@@ -153,7 +153,7 @@ class VendorController extends Controller
             'procurement',
             'plenaryMeetingItem.item',
             'plenaryMeetingItem.cooperative',
-            'statusLogs',
+
             'processStatuses',
         ])
         ->whereHas('procurement', function ($q) use ($vendorID) {
@@ -181,16 +181,7 @@ class VendorController extends Controller
                 'total_price' => $item->total_price,
                 'delivery_status' => $item->delivery_status,
                 'process_status' => $item->process_status,
-                'status_logs' => $item->statusLogs->map(function ($log) {
-                    return [
-                        'old_delivery_status' => $log->old_delivery_status,
-                        'new_delivery_status' => $log->new_delivery_status,
-                        'area_id' => $log->area_id,
-                        'status_date' => $log->status_date,
-                        'changed_by' => $log->changed_by,
-                        'notes' => $log->notes,
-                    ];
-                }),
+
                 'process_statuses' => $item->processStatuses->map(function ($status) {
                     return [
                         'status' => $status->status,

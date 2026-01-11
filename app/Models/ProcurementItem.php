@@ -75,10 +75,7 @@ class ProcurementItem extends Model
         return $this->hasMany(ProcurementItemProcessStatus::class, 'procurement_item_id');
     }
 
-    public function statusLogs()
-    {
-        return $this->hasMany(ShipmentStatusLog::class, 'procurement_item_id');
-    }
+
 
     public function creator()
     {

@@ -250,7 +250,12 @@ class ProcurementController extends Controller
         ->whereHas('procurement', function($q) use ($vendor) {
             $q->where('vendor_id', $vendor->id);
         })
-        ->where('process_status', 'completed')
+        ->where(function ($q) {
+            $q->where('process_status', 'completed')
+              ->orWhereHas('processStatuses', function ($subQ) {
+                  $subQ->where('percentage', 100);
+              });
+        })
         ->where('delivery_status', 'pending')
         ->orderByDesc('id')
         ->get()

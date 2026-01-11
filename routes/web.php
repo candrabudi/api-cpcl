@@ -49,7 +49,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
 
             $router->group(['prefix' => 'cpcl-documents'], function () use ($router) {
                 $router->get('/', 'CpclDocumentController@index');
-                $router->post('/', 'CpclDocumentController@store'); // Allow POST to root for creation
+                $router->post('/', 'CpclDocumentController@store');
                 $router->get('{id}/show', 'CpclDocumentController@show');
                 $router->post('store', 'CpclDocumentController@store');
                 $router->put('{id}/update', 'CpclDocumentController@update');
@@ -130,6 +130,13 @@ $router->group(['prefix' => 'api'], function () use ($router) {
                 $router->delete('/{id}/delete', 'ProcurementController@destroy');
             });
 
+            $router->group(['prefix' => 'inspection-reports'], function () use ($router) {
+                $router->get('/auto-generate', 'InspectionReportController@generateFromShipments');
+                $router->get('/', 'InspectionReportController@index');
+                $router->get('/{id}', 'InspectionReportController@show');
+                $router->post('/{id}/update', 'InspectionReportController@update');
+            });
+
             $router->group(['prefix' => 'items'], function () use ($router) {
                 $router->get('/', 'ItemController@index');
                 $router->get('/{id}/show', 'ItemController@show');
@@ -163,6 +170,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             $router->group(['prefix' => 'shipments'], function () use ($router) {
                 $router->get('/', 'ShipmentController@index');
                 $router->get('/{id}/show', 'ShipmentController@show');
+                $router->get('/{id}/trackings', 'ShipmentController@trackingHistory');
                 $router->post('/store', 'ShipmentController@store');
                 $router->put('/{id}/status', 'ShipmentController@updateStatus');
             });
@@ -174,14 +182,17 @@ $router->group(['prefix' => 'api'], function () use ($router) {
             
             $router->get('/procurements', 'ProcurementController@index');
             $router->get('/procurements/{id}', 'ProcurementController@show');
+            $router->get('/ready-to-ship', 'ProcurementController@readyToShip');
             $router->put('/procurements/{id}/delivery-status', 'ProcurementController@updateDeliveryStatus');
             $router->put('/procurements/{id}/process-status', 'ProcurementController@updateProcessStatus');
 
             // Shipment Management for Vendor
             $router->get('/shipments', 'ShipmentController@index');
             $router->get('/shipments/{id}', 'ShipmentController@show');
+            $router->get('/shipments/{id}/trackings', 'ShipmentController@trackingHistory');
             $router->post('/shipments/store', 'ShipmentController@store');
             $router->put('/shipments/{id}/status', 'ShipmentController@updateStatus');
+            $router->post('/shipments/{id}/track', 'ShipmentController@track');
         });
     });
 });

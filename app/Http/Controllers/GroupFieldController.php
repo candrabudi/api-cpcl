@@ -6,12 +6,12 @@ use App\Helpers\ApiResponse;
 use App\Models\GroupField;
 use App\Models\GroupFieldRow;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class GroupFieldController extends Controller
 {
-    /**
-     * LIST DOCUMENTS.
-     */
     public function index(Request $request)
     {
         try {
@@ -36,9 +36,6 @@ class GroupFieldController extends Controller
         return ApiResponse::success('Documents retrieved', $documents);
     }
 
-    /**
-     * SHOW DOCUMENT (TREE).
-     */
     public function show($id)
     {
         if (!is_numeric($id)) {
@@ -69,9 +66,6 @@ class GroupFieldController extends Controller
         ]);
     }
 
-    /**
-     * STORE = CREATE TEMPLATE (FULL TREE).
-     */
     public function store(Request $request)
     {
         try {
@@ -116,9 +110,6 @@ class GroupFieldController extends Controller
         );
     }
 
-    /**
-     * UPDATE = FILL VALUE ONLY.
-     */
     public function update(Request $request, $id)
     {
         if (!is_numeric($id)) {
@@ -163,9 +154,6 @@ class GroupFieldController extends Controller
         return ApiResponse::success('Document updated');
     }
 
-    /**
-     * DELETE DOCUMENT.
-     */
     public function destroy($id)
     {
         if (!is_numeric($id)) {
@@ -186,15 +174,6 @@ class GroupFieldController extends Controller
         return ApiResponse::success('Document deleted');
     }
 
-    /**
-     * =========================
-     * PRIVATE HELPERS
-     * =========================.
-     */
-
-    /**
-     * STORE TREE RECURSIVE (SERVER CONTROLLED).
-     */
     protected function storeRowsRecursive(array $rows, int $documentId, ?int $parentId)
     {
         foreach ($rows as $index => $row) {
@@ -218,9 +197,6 @@ class GroupFieldController extends Controller
         }
     }
 
-    /**
-     * MAP TREE RESPONSE.
-     */
     protected function mapTree($rows, $level = 0)
     {
         return $rows->map(function ($row) use ($level) {

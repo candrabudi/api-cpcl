@@ -13,10 +13,6 @@ use Illuminate\Support\Str;
 
 class ItemController extends Controller
 {
-    /**
-     * Check if user is admin/superadmin
-     * SECURITY: Only admin can manage items
-     */
     private function checkAdmin($user): ?object
     {
         if (!$user || !in_array($user->role, ['admin', 'superadmin'])) {
@@ -30,38 +26,30 @@ class ItemController extends Controller
         return null;
     }
 
-    /**
-     * List all items
-     * SECURITY: Admin only
-     */
     public function index(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
         if ($adminCheck) return $adminCheck;
 
         try {
-            $perPage = min((int) $request->get('per_page', 15), 100); // Max 100 items
+            $perPage = min((int) $request->get('per_page', 15), 100);
             $query = Item::with('type')->orderByDesc('id');
 
-            // Archive Filter
             if ($request->get('filter') === 'archived') {
                 $query->onlyTrashed();
             } elseif ($request->get('show_archived') === 'true') {
                 $query->withTrashed();
             }
 
-            // Search filter
             if ($request->filled('search')) {
                 $search = trim($request->search);
                 $query->where('name', 'like', "%{$search}%");
             }
 
-            // Process type filter
             if ($request->filled('process_type')) {
                 $query->where('process_type', $request->process_type);
             }
 
-            // Type filter
             if ($request->filled('item_type_id') && is_numeric($request->item_type_id)) {
                 $query->where('item_type_id', $request->item_type_id);
             }
@@ -77,10 +65,6 @@ class ItemController extends Controller
         }
     }
 
-    /**
-     * Show item detail
-     * SECURITY: Admin only
-     */
     public function show(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -106,17 +90,11 @@ class ItemController extends Controller
         }
     }
 
-    /**
-     * Create new item
-     * TRANSACTION: Protected create operation
-     * SECURITY: Admin only
-     */
     public function store(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
         if ($adminCheck) return $adminCheck;
 
-        // Validation
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'item_type_id' => 'required|exists:item_types,id',
@@ -129,7 +107,6 @@ class ItemController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        // TRANSACTION: Create item
         try {
             DB::beginTransaction();
 
@@ -164,11 +141,6 @@ class ItemController extends Controller
         }
     }
 
-    /**
-     * Update item
-     * TRANSACTION: Protected update operation
-     * SECURITY: Admin only
-     */
     public function update(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -183,7 +155,6 @@ class ItemController extends Controller
             return ApiResponse::error('Item not found', 404);
         }
 
-        // Validation
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'item_type_id' => 'required|exists:item_types,id',
@@ -196,7 +167,6 @@ class ItemController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        // TRANSACTION: Update item
         try {
             DB::beginTransaction();
 
@@ -232,11 +202,6 @@ class ItemController extends Controller
         }
     }
 
-    /**
-     * Delete item (soft delete)
-     * TRANSACTION: Protected delete operation
-     * SECURITY: Admin only
-     */
     public function destroy(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -251,7 +216,6 @@ class ItemController extends Controller
             return ApiResponse::error('Item not found', 404);
         }
 
-        // TRANSACTION: Delete item
         try {
             DB::beginTransaction();
 
@@ -279,10 +243,6 @@ class ItemController extends Controller
         }
     }
 
-    /**
-     * List all item types
-     * SECURITY: Admin only
-     */
     public function types(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());

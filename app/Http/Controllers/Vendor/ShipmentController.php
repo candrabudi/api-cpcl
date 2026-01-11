@@ -11,12 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class ShipmentController extends Controller
 {
-    /**
-     * Get vendor from authenticated user
-     */
     private function getVendor($user)
     {
         if (!$user || !$user->vendor) {
@@ -25,9 +23,6 @@ class ShipmentController extends Controller
         return $user->vendor;
     }
 
-    /**
-     * List all shipments for vendor
-     */
     public function index(Request $request)
     {
         $vendor = $this->getVendor($request->user());
@@ -55,9 +50,6 @@ class ShipmentController extends Controller
         return ApiResponse::success('Vendor shipments retrieved', $query->paginate($perPage));
     }
 
-    /**
-     * Show shipment detail
-     */
     public function show(Request $request, $id)
     {
         $vendor = $this->getVendor($request->user());
@@ -66,8 +58,7 @@ class ShipmentController extends Controller
         }
 
         $shipment = Shipment::with([
-            'items.procurementItem.plenaryMeetingItem.item',
-            'statusLogs.user'
+            'items.procurementItem.plenaryMeetingItem.item'
         ])
         ->where('vendor_id', $vendor->id)
         ->find($id);
@@ -79,9 +70,26 @@ class ShipmentController extends Controller
         return ApiResponse::success('Shipment detail', $shipment);
     }
 
-    /**
-     * Create new shipment
-     */
+    public function trackingHistory(Request $request, $id)
+    {
+        $vendor = $this->getVendor($request->user());
+        if (!$vendor) {
+            return ApiResponse::error('Vendor profile not found', 403);
+        }
+
+        $shipment = Shipment::where('vendor_id', $vendor->id)->find($id);
+        if (!$shipment) {
+            return ApiResponse::error('Shipment not found', 404);
+        }
+
+        $logs = ShipmentStatusLog::with(['user', 'area'])
+            ->where('shipment_id', $id)
+            ->orderByDesc('id')
+            ->get();
+
+        return ApiResponse::success('Shipment tracking history retrieved', $logs);
+    }
+
     public function store(Request $request)
     {
         $vendor = $this->getVendor($request->user());
@@ -94,7 +102,6 @@ class ShipmentController extends Controller
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -112,20 +119,51 @@ class ShipmentController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            foreach ($request->items as $item) {
+            foreach ($request->items as $itemData) {
+                $procurementItem = \App\Models\ProcurementItem::whereHas('procurement', function($q) use ($vendor) {
+                    $q->where('vendor_id', $vendor->id);
+                })->find($itemData['procurement_item_id']);
+
+                if (!$procurementItem) {
+                    throw new \Exception("Procurement item ID {$itemData['procurement_item_id']} not found or does not belong to your vendor.");
+                }
+
+                // Validation: If it's a production item, status must be 'completed' before shipping
+                $itemModel = $procurementItem->plenaryMeetingItem?->item;
+                if ($itemModel && $itemModel->process_type === 'production') {
+                    if ($procurementItem->process_status !== 'completed') {
+                        throw new \Exception("Item '{$itemModel->name}' cannot be shipped. Production process is not yet completed (current status: {$procurementItem->process_status}).");
+                    }
+                }
+
+                // Automatically use remaining quantity
+                $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
+                    ->sum('quantity');
+                $remainingQty = $procurementItem->quantity - $shippedQty;
+
+                if ($remainingQty <= 0) {
+                    throw new \Exception("Item {$procurementItem->id} already fully shipped.");
+                }
+
                 ShipmentItem::create([
                     'shipment_id' => $shipment->id,
-                    'procurement_item_id' => $item['procurement_item_id'],
-                    'quantity' => $item['quantity'],
+                    'procurement_item_id' => $procurementItem->id,
+                    'quantity' => $remainingQty,
                 ]);
+
+                // Update procurement item status fixed as fully shipped since we take all remaining
+                $procurementItem->update(['delivery_status' => 'shipped']);
             }
 
             ShipmentStatusLog::create([
                 'shipment_id' => $shipment->id,
                 'status' => 'pending',
                 'notes' => 'Shipment created via Mobile',
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'area_id' => $request->area_id,
                 'created_by' => Auth::id(),
-                'changed_at' => now(),
+                'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();
@@ -137,9 +175,6 @@ class ShipmentController extends Controller
         }
     }
 
-    /**
-     * Update shipment status
-     */
     public function updateStatus(Request $request, $id)
     {
         $vendor = $this->getVendor($request->user());
@@ -156,6 +191,9 @@ class ShipmentController extends Controller
             'status' => 'required|in:pending,prepared,shipped,delivered,received,returned,cancelled',
             'notes' => 'nullable|string|max:1000',
             'tracking_number' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'area_id' => 'nullable|exists:areas,id',
         ]);
 
         if ($validator->fails()) {
@@ -171,7 +209,7 @@ class ShipmentController extends Controller
             }
 
             if ($request->status === 'shipped' && !$shipment->shipped_at) {
-                $shipment->shipped_at = now();
+                $shipment->shipped_at = Carbon::now();
             }
             
             $shipment->save();
@@ -180,16 +218,73 @@ class ShipmentController extends Controller
                 'shipment_id' => $shipment->id,
                 'status' => $request->status,
                 'notes' => $request->notes,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'area_id' => $request->area_id,
                 'created_by' => Auth::id(),
-                'changed_at' => now(),
+                'changed_at' => Carbon::now(),
             ]);
 
             DB::commit();
+
+            // Trigger BA generation check for procurement if shipment delivered
+            if ($request->status === 'delivered') {
+                $procurementIds = \App\Models\ShipmentItem::where('shipment_id', $shipment->id)
+                    ->join('procurement_items', 'shipment_items.procurement_item_id', '=', 'procurement_items.id')
+                    ->distinct()
+                    ->pluck('procurement_items.procurement_id');
+
+                $inspectionCtrl = new \App\Http\Controllers\InspectionReportController();
+                foreach ($procurementIds as $pId) {
+                    $inspectionCtrl->generateForProcurement($pId);
+                }
+            }
 
             return ApiResponse::success('Shipment status updated', $shipment);
         } catch (\Throwable $e) {
             DB::rollBack();
             return ApiResponse::error('Failed to update shipment status: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function track(Request $request, $id)
+    {
+        $vendor = $this->getVendor($request->user());
+        if (!$vendor) {
+            return ApiResponse::error('Vendor profile not found', 403);
+        }
+
+        $shipment = Shipment::where('vendor_id', $vendor->id)->find($id);
+        if (!$shipment) {
+            return ApiResponse::error('Shipment not found', 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            'area_id' => 'nullable|exists:areas,id',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::validationError($validator->errors()->toArray());
+        }
+
+        try {
+            $log = \App\Models\ShipmentStatusLog::create([
+                'shipment_id' => $shipment->id,
+                'status' => $shipment->status,
+                'notes' => $request->notes ?? 'Location update',
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'area_id' => $request->area_id,
+                'created_by' => Auth::id(),
+                'changed_at' => Carbon::now(),
+            ]);
+
+            return ApiResponse::success('Shipment location tracked', $log);
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Failed to track shipment: ' . $e->getMessage(), 500);
         }
     }
 }

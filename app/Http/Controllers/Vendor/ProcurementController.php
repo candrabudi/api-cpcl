@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\Auth;
 
 class ProcurementController extends Controller
 {
-    /**
-     * Get vendor from authenticated user
-     * SECURITY: Ensures user has vendor profile
-     */
     private function getVendor($user)
     {
         if (!$user || !$user->vendor) {
@@ -26,9 +22,6 @@ class ProcurementController extends Controller
         return $user->vendor;
     }
 
-    /**
-     * Get vendor dashboard statistics
-     */
     public function dashboard(Request $request)
     {
         $vendor = $this->getVendor($request->user());
@@ -42,21 +35,29 @@ class ProcurementController extends Controller
             })->count(),
             'pending_process' => ProcurementItem::whereHas('procurement', function($q) use ($vendor) {
                 $q->where('vendor_id', $vendor->id);
+            })->whereHas('plenaryMeetingItem.item', function($q) {
+                $q->where('process_type', 'production');
             })->where('process_status', 'pending')->count(),
             'production' => ProcurementItem::whereHas('procurement', function($q) use ($vendor) {
                 $q->where('vendor_id', $vendor->id);
+            })->whereHas('plenaryMeetingItem.item', function($q) {
+                $q->where('process_type', 'production');
             })->where('process_status', 'production')->count(),
             'completed' => ProcurementItem::whereHas('procurement', function($q) use ($vendor) {
                 $q->where('vendor_id', $vendor->id);
+            })->whereHas('plenaryMeetingItem.item', function($q) {
+                $q->where('process_type', 'production');
             })->where('process_status', 'completed')->count(),
+            'ready_to_ship' => ProcurementItem::whereHas('procurement', function($q) use ($vendor) {
+                $q->where('vendor_id', $vendor->id);
+            })->whereHas('plenaryMeetingItem.item', function($q) {
+                $q->where('process_type', 'purchase');
+            })->count(),
         ];
 
         return ApiResponse::success('Vendor dashboard statistics', $stats);
     }
 
-    /**
-     * List procurement items for authenticated vendor
-     */
     public function index(Request $request)
     {
         $vendor = $this->getVendor($request->user());
@@ -64,44 +65,27 @@ class ProcurementController extends Controller
             return ApiResponse::error('Unauthorized: Vendor profile not found', 403);
         }
 
-        $query = ProcurementItem::with([
-            'procurement',
-            'plenaryMeetingItem.item',
-            'plenaryMeetingItem.cooperative',
-            'processStatuses.user',
-            'shipmentItems.shipment'
-        ])->whereHas('procurement', function($q) use ($vendor) {
-            $q->where('vendor_id', $vendor->id);
-        });
+        $query = \App\Models\Procurement::withCount('items')
+            ->where('vendor_id', $vendor->id);
 
         if ($request->filled('search')) {
             $search = trim($request->search);
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('procurement', function ($qp) use ($search) {
-                    $qp->where('procurement_number', 'like', "%$search%");
-                })
-                ->orWhereHas('plenaryMeetingItem.item', function ($qi) use ($search) {
-                    $qi->where('name', 'like', "%$search%");
-                });
-            });
+            $query->where('procurement_number', 'like', "%$search%");
         }
 
-        if ($request->filled('process_status')) {
-            $allowedStatuses = ['pending', 'purchase', 'production', 'completed'];
-            if (in_array($request->process_status, $allowedStatuses)) {
-                $query->where('process_status', $request->process_status);
+        if ($request->filled('status')) {
+            $allowedStatuses = ['draft', 'processed', 'completed', 'cancelled'];
+            if (in_array($request->status, $allowedStatuses)) {
+                $query->where('status', $request->status);
             }
         }
 
         $perPage = min((int) $request->get('per_page', 10), 100);
-        $items = $query->orderByDesc('id')->paginate($perPage);
+        $procurements = $query->orderByDesc('id')->paginate($perPage);
 
-        return ApiResponse::success('Vendor procurement items retrieved', $items);
+        return ApiResponse::success('Vendor procurements retrieved', $procurements);
     }
 
-    /**
-     * Show procurement item detail
-     */
     public function show(Request $request, $id)
     {
         $vendor = $this->getVendor($request->user());
@@ -109,26 +93,21 @@ class ProcurementController extends Controller
             return ApiResponse::error('Unauthorized: Vendor profile not found', 403);
         }
 
-        $item = ProcurementItem::with([
-            'procurement.vendor',
-            'plenaryMeetingItem.item',
-            'plenaryMeetingItem.cooperative',
-            'processStatuses.user',
-            'shipmentItems.shipment'
-        ])->whereHas('procurement', function($q) use ($vendor) {
-            $q->where('vendor_id', $vendor->id);
-        })->find($id);
+        $procurement = \App\Models\Procurement::with([
+            'items.plenaryMeetingItem.item',
+            'items.plenaryMeetingItem.cooperative',
+            'items.processStatuses.user',
+            'items.shipmentItems.shipment',
+            'vendor'
+        ])->where('vendor_id', $vendor->id)->find($id);
 
-        if (!$item) {
-            return ApiResponse::error('Procurement item not found', 404);
+        if (!$procurement) {
+            return ApiResponse::error('Procurement not found', 404);
         }
 
-        return ApiResponse::success('Procurement item detail', $item);
+        return ApiResponse::success('Procurement detail', $procurement);
     }
 
-    /**
-     * Update procurement item process status
-     */
     public function updateProcessStatus(Request $request, $id)
     {
         if (!is_numeric($id)) {
@@ -140,7 +119,7 @@ class ProcurementController extends Controller
             return ApiResponse::error('Unauthorized: Vendor profile not found', 403);
         }
 
-        $item = ProcurementItem::with('procurement')->find($id);
+        $item = ProcurementItem::with(['procurement', 'plenaryMeetingItem.item'])->find($id);
         if (!$item) {
             return ApiResponse::error('Procurement item not found', 404);
         }
@@ -149,8 +128,15 @@ class ProcurementController extends Controller
             return ApiResponse::error('Unauthorized: This procurement item does not belong to your vendor', 403);
         }
 
+        $processType = $item->plenaryMeetingItem->item->process_type ?? 'production'; // default to production for safety
+        if ($processType === 'purchase') {
+            return ApiResponse::error('Items with "purchase" process type do not need to go through the production process.', 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'process_status' => 'required|in:pending,purchase,production,completed',
+            'production_attribute_id' => 'nullable|exists:production_attributes,id',
+            'percentage' => 'nullable|integer|min:0|max:100',
             'production_start_date' => 'nullable|date',
             'production_end_date' => 'nullable|date|after_or_equal:production_start_date',
             'area_id' => 'nullable|exists:areas,id',
@@ -159,6 +145,17 @@ class ProcurementController extends Controller
 
         if ($validator->fails()) {
             return ApiResponse::validationError($validator->errors()->toArray());
+        }
+
+        // Logic check: Percentage cannot decrease
+        if ($request->filled('percentage')) {
+            $latestStatus = \App\Models\ProcurementItemProcessStatus::where('procurement_item_id', $item->id)
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            if ($latestStatus && (int)$request->percentage < (int)$latestStatus->percentage) {
+                return ApiResponse::error('Percentage cannot be lower than the previous record (' . $latestStatus->percentage . '%)', 400);
+            }
         }
 
         try {
@@ -170,7 +167,9 @@ class ProcurementController extends Controller
 
             ProcurementItemProcessStatus::create([
                 'procurement_item_id' => $item->id,
+                'production_attribute_id' => $request->production_attribute_id,
                 'status' => $request->process_status,
+                'percentage' => $request->percentage ?? 0,
                 'production_start_date' => $request->production_start_date ?? null,
                 'production_end_date' => $request->production_end_date ?? null,
                 'area_id' => $request->area_id ?? null,
@@ -191,9 +190,6 @@ class ProcurementController extends Controller
         }
     }
 
-    /**
-     * Update procurement item delivery status
-     */
     public function updateDeliveryStatus(Request $request, $id)
     {
         if (!is_numeric($id)) {
@@ -236,5 +232,53 @@ class ProcurementController extends Controller
             DB::rollBack();
             return ApiResponse::error('Failed to update delivery status: ' . $e->getMessage(), 500);
         }
+    }
+
+    public function readyToShip(Request $request)
+    {
+        $vendor = $this->getVendor($request->user());
+        if (!$vendor) {
+            return ApiResponse::error('Unauthorized: Vendor profile not found', 403);
+        }
+
+        $items = ProcurementItem::with([
+            'procurement',
+            'plenaryMeetingItem.item',
+            'plenaryMeetingItem.cooperative'
+        ])
+        ->whereHas('procurement', function($q) use ($vendor) {
+            $q->where('vendor_id', $vendor->id);
+        })
+        ->where('process_status', 'completed')
+        ->where('delivery_status', 'pending')
+        ->orderByDesc('id')
+        ->get()
+        ->map(function ($item) {
+            $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $item->id)->sum('quantity');
+            $remainingQty = max(0, $item->quantity - $shippedQty);
+
+            return [
+                'procurement_item_id' => $item->id,
+                'procurement_id' => $item->procurement_id,
+                'procurement_number' => $item->procurement?->procurement_number,
+                'item_id' => $item->plenaryMeetingItem?->item_id,
+                'item_name' => $item->plenaryMeetingItem?->item?->name,
+                'total_quantity' => $item->quantity,
+                'shipped_quantity' => $shippedQty,
+                'remaining_quantity' => $remainingQty,
+                'unit' => $item->plenaryMeetingItem?->item?->unit,
+                'cooperative_id' => $item->plenaryMeetingItem?->cooperative_id,
+                'cooperative_name' => $item->plenaryMeetingItem?->cooperative?->name,
+                'process_type' => $item->plenaryMeetingItem?->item?->process_type,
+                'process_status' => $item->process_status,
+                'delivery_status' => $item->delivery_status,
+            ];
+        })
+        ->filter(function ($item) {
+            return $item['remaining_quantity'] > 0;
+        })
+        ->values();
+
+        return ApiResponse::success('Ready to ship items retrieved', $items);
     }
 }

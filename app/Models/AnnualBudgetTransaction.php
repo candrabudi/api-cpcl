@@ -12,37 +12,46 @@ class AnnualBudgetTransaction extends Model
         'annual_budget_id',
         'item_type_budget_id',
         'procurement_item_id',
+        'type',
         'amount',
+        'notes',
     ];
 
     protected static function booted()
     {
         static::created(function ($transaction) {
-            // 1. Update Global Annual Budget
             $budget = $transaction->budget;
-            if ($budget) {
-                $budget->increment('used_budget', $transaction->amount);
-                $budget->decrement('remaining_budget', $transaction->amount);
-            }
+            if (!$budget) return;
 
-            // 2. Update Category Budget (Item Type Budget)
-            $itemTypeBudget = $transaction->itemTypeBudget;
-            if ($itemTypeBudget) {
-                $itemTypeBudget->increment('used_amount', $transaction->amount);
+            if ($transaction->type === 'allocation') {
+                $budget->increment('allocated_budget', $transaction->amount);
+                $budget->decrement('remaining_budget', $transaction->amount);
+            } else {
+                // Type: spending
+                $budget->increment('used_budget', $transaction->amount);
+                
+                $itemTypeBudget = $transaction->itemTypeBudget;
+                if ($itemTypeBudget) {
+                    $itemTypeBudget->increment('used_amount', $transaction->amount);
+                }
             }
         });
 
         static::deleted(function ($transaction) {
-            // Revert balances if transaction is deleted
             $budget = $transaction->budget;
-            if ($budget) {
-                $budget->decrement('used_budget', $transaction->amount);
-                $budget->increment('remaining_budget', $transaction->amount);
-            }
+            if (!$budget) return;
 
-            $itemTypeBudget = $transaction->itemTypeBudget;
-            if ($itemTypeBudget) {
-                $itemTypeBudget->decrement('used_amount', $transaction->amount);
+            if ($transaction->type === 'allocation') {
+                $budget->decrement('allocated_budget', $transaction->amount);
+                $budget->increment('remaining_budget', $transaction->amount);
+            } else {
+                // Type: spending
+                $budget->decrement('used_budget', $transaction->amount);
+
+                $itemTypeBudget = $transaction->itemTypeBudget;
+                if ($itemTypeBudget) {
+                    $itemTypeBudget->decrement('used_amount', $transaction->amount);
+                }
             }
         });
     }

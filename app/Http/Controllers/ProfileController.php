@@ -13,10 +13,6 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ProfileController extends Controller
 {
-    /**
-     * Get authenticated user from JWT token
-     * SECURITY: Validates token and returns user
-     */
     protected function authUser(Request $request)
     {
         $token = $request->bearerToken();
@@ -35,11 +31,6 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Show user profile
-     * SECURITY: User can only see their own profile
-     * PERFORMANCE: Cached for 60 seconds
-     */
     public function show(Request $request)
     {
         try {
@@ -82,14 +73,8 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Update user profile details
-     * TRANSACTION: Protected update operation
-     * SECURITY: User can only update their own profile
-     */
     public function update(Request $request)
     {
-        // Validation
         try {
             $this->validate($request, [
                 'full_name' => 'required|string|max:100',
@@ -100,17 +85,14 @@ class ProfileController extends Controller
             return ApiResponse::validationError($e->errors());
         }
 
-        // Authentication check
         $user = $this->authUser($request);
         if (!$user) {
             return ApiResponse::error('Unauthenticated', 401);
         }
 
-        // TRANSACTION: Atomic update profile + clear cache
         try {
             DB::beginTransaction();
 
-            // Update or create user detail
             UserDetail::updateOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -120,7 +102,6 @@ class ProfileController extends Controller
                 ]
             );
 
-            // Clear profile cache
             Cache::forget('profile:' . $user->id);
 
             DB::commit();
@@ -144,14 +125,8 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Change user password
-     * TRANSACTION: Protected password change
-     * SECURITY: Validates current password, invalidates old tokens
-     */
     public function changePassword(Request $request)
     {
-        // Validation
         try {
             $this->validate($request, [
                 'current_password' => 'required|string',
@@ -161,44 +136,35 @@ class ProfileController extends Controller
             return ApiResponse::validationError($e->errors());
         }
 
-        // Authentication check
         $user = $this->authUser($request);
         if (!$user) {
             return ApiResponse::error('Unauthenticated', 401);
         }
 
-        // SECURITY: Verify current password
         if (!Hash::check($request->current_password, $user->password)) {
             \Log::warning('Failed password change attempt - incorrect current password', [
                 'user_id' => $user->id,
                 'ip' => $request->ip(),
             ]);
 
-            // SECURITY: Generic error message to prevent enumeration
             return ApiResponse::error('Current password is incorrect', 400);
         }
 
-        // SECURITY: Check if new password is same as current (optional)
         if (Hash::check($request->new_password, $user->password)) {
             return ApiResponse::error('New password must be different from current password', 400);
         }
 
-        // TRANSACTION: Atomic password change + token invalidation + cache clear
         try {
             DB::beginTransaction();
 
-            // Update password
             $user->password = Hash::make($request->new_password);
             $user->save();
 
-            // Clear profile cache
             Cache::forget('profile:' . $user->id);
 
-            // SECURITY: Invalidate current JWT token (force re-login)
             try {
                 JWTAuth::invalidate(JWTAuth::getToken());
             } catch (\Throwable $e) {
-                // Token invalidation failed, but password changed - log warning
                 \Log::warning('Failed to invalidate JWT token after password change', [
                     'user_id' => $user->id,
                     'error' => $e->getMessage(),
@@ -222,7 +188,6 @@ class ProfileController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // SECURITY: Generic error message
             return ApiResponse::error('Failed to change password', 500);
         }
     }

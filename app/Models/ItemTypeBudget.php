@@ -33,6 +33,7 @@ class ItemTypeBudget extends Model
         static::created(function ($itemTypeBudget) {
             $annualBudget = AnnualBudget::where('budget_year', $itemTypeBudget->year)->first();
             if ($annualBudget) {
+                // Log for visibility
                 AnnualBudgetLog::create([
                     'annual_budget_id' => $annualBudget->id,
                     'item_type_budget_id' => $itemTypeBudget->id,
@@ -42,6 +43,15 @@ class ItemTypeBudget extends Model
                     'notes' => "Initial allocation for " . optional($itemTypeBudget->itemType)->name,
                     'changes' => $itemTypeBudget->getAttributes()
                 ]);
+
+                // Create transaction to deduct from annual budget
+                AnnualBudgetTransaction::create([
+                    'annual_budget_id' => $annualBudget->id,
+                    'item_type_budget_id' => $itemTypeBudget->id,
+                    'type' => 'allocation',
+                    'amount' => $itemTypeBudget->amount,
+                    'notes' => "Allocated to " . optional($itemTypeBudget->itemType)->name,
+                ]);
             }
         });
 
@@ -49,17 +59,30 @@ class ItemTypeBudget extends Model
             if ($itemTypeBudget->isDirty('amount')) {
                 $annualBudget = AnnualBudget::where('budget_year', $itemTypeBudget->year)->first();
                 if ($annualBudget) {
+                    $oldAmount = $itemTypeBudget->getOriginal('amount');
+                    $newAmount = $itemTypeBudget->amount;
+                    $diff = $newAmount - $oldAmount;
+
                     AnnualBudgetLog::create([
                         'annual_budget_id' => $annualBudget->id,
                         'item_type_budget_id' => $itemTypeBudget->id,
                         'user_id' => auth()->id(),
                         'action' => 'adjustment',
-                        'amount' => $itemTypeBudget->amount,
+                        'amount' => $diff,
                         'notes' => "Budget adjustment for " . optional($itemTypeBudget->itemType)->name,
                         'changes' => [
-                            'old' => $itemTypeBudget->getOriginal('amount'),
-                            'new' => $itemTypeBudget->amount
+                            'old' => $oldAmount,
+                            'new' => $newAmount
                         ]
+                    ]);
+
+                    // Create transaction for the difference
+                    AnnualBudgetTransaction::create([
+                        'annual_budget_id' => $annualBudget->id,
+                        'item_type_budget_id' => $itemTypeBudget->id,
+                        'type' => 'allocation',
+                        'amount' => $diff,
+                        'notes' => "Budget adjustment for " . optional($itemTypeBudget->itemType)->name,
                     ]);
                 }
             }

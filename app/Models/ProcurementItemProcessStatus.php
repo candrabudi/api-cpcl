@@ -11,7 +11,9 @@ class ProcurementItemProcessStatus extends Model
     use SoftDeletes;
     protected $fillable = [
         'procurement_item_id',
+        'production_attribute_id',
         'status',
+        'percentage',
         'production_start_date',
         'production_end_date',
         'area_id',
@@ -23,6 +25,11 @@ class ProcurementItemProcessStatus extends Model
     public function procurementItem(): BelongsTo
     {
         return $this->belongsTo(ProcurementItem::class);
+    }
+
+    public function productionAttribute(): BelongsTo
+    {
+        return $this->belongsTo(ProductionAttribute::class);
     }
 
     public function area(): BelongsTo

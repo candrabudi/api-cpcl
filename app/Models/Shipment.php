@@ -47,4 +47,9 @@ class Shipment extends Model
     {
         return $this->hasMany(ShipmentStatusLog::class)->orderByDesc('id');
     }
+
+    public function inspectionReports()
+    {
+        return $this->hasMany(InspectionReport::class);
+    }
 }

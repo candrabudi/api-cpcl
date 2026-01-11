@@ -13,17 +13,27 @@ class ShipmentStatusLog extends Model
         'shipment_id',
         'status',
         'notes',
+        'latitude',
+        'longitude',
+        'area_id',
         'created_by',
         'changed_at',
     ];
 
     protected $casts = [
         'changed_at' => 'datetime',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
     ];
 
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
+    }
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class);
     }
 
     public function user()

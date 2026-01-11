@@ -87,7 +87,6 @@ class VendorController extends Controller
                 'vendor_id' => $id,
                 'error' => $e->getMessage(),
             ]);
-            // Continue with existing total_paid value
         }
 
         return ApiResponse::success('Vendor detail', $vendor);
@@ -117,10 +116,8 @@ class VendorController extends Controller
 
         $items = $itemsQuery->get();
 
-        // Total seluruh pembayaran untuk vendor
         $totalPaid = $items->sum('total_price');
 
-        // Group per procurement, hanya tampilkan total
         $procurements = $items->groupBy('procurement_id')->map(function ($group) {
             $procurement = $group->first()->procurement;
             $procurementTotal = $group->sum('total_price');
@@ -232,7 +229,7 @@ class VendorController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'documents' => 'nullable|array',
             'documents.*.document_type_id' => 'required|exists:document_types,id',
-            'documents.*.file' => 'required|file|max:5120', // Max 5MB
+            'documents.*.file' => 'required|file|max:5120',
             'documents.*.notes' => 'nullable|string'
         ]);
 
@@ -243,7 +240,6 @@ class VendorController extends Controller
         try {
             DB::beginTransaction();
 
-            // Create User first
             $baseUsername = strtolower(preg_replace('/\s+/', '_', $request->name));
             $username = $baseUsername;
             $count = 1;
@@ -255,7 +251,6 @@ class VendorController extends Controller
             $email = $request->email ?? ($baseUsername . '@example.com');
             $defaultPassword = 'Vendor1234!';
 
-            // Check if email already exists in User table
             if (User::where('email', $email)->exists()) {
                 return ApiResponse::validationError(['email' => ['Email already exists.']]);
             }
@@ -282,7 +277,6 @@ class VendorController extends Controller
                 'total_paid' => 0,
             ]);
 
-            // Handle Documents
             if ($request->hasFile('documents')) {
                 foreach ($request->file('documents') as $docData) {
                     $file = $docData['file'];
@@ -349,14 +343,12 @@ class VendorController extends Controller
 
             $newEmail = $request->email ?? $vendor->email;
 
-            // Update user email if changed
             if ($newEmail !== $vendor->user->email) {
                 $vendor->user->update([
                     'email' => $newEmail,
                 ]);
             }
 
-            // Update vendor data
             $vendor->update([
                 'area_id' => $request->area_id,
                 'name' => $request->name,
@@ -369,7 +361,6 @@ class VendorController extends Controller
                 'longitude' => $request->longitude,
             ]);
 
-            // Handle New Documents
             if ($request->hasFile('documents')) {
                 foreach ($request->file('documents') as $docData) {
                     $file = $docData['file'];
@@ -412,7 +403,6 @@ class VendorController extends Controller
 
             $vendor->restore();
             
-            // Also restore the user if it was deleted
             $user = User::withTrashed()->find($vendor->user_id);
             if ($user && $user->trashed()) {
                 $user->restore();

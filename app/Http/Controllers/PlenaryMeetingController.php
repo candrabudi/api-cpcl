@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\Validator;
 
 class PlenaryMeetingController extends Controller
 {
-    /**
-     * Check if user is admin/superadmin
-     * SECURITY: Only admin can manage plenary meetings
-     */
     private function checkAdmin($user): ?object
     {
         if (!in_array($user->role, ['admin', 'superadmin'])) {
@@ -30,16 +26,12 @@ class PlenaryMeetingController extends Controller
         return null;
     }
 
-    /**
-     * List all plenary meetings
-     * SECURITY: Admin only
-     */
     public function index(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
         if ($adminCheck) return $adminCheck;
 
-        $perPage = min((int) $request->get('per_page', 15), 100); // Max 100
+        $perPage = min((int) $request->get('per_page', 15), 100);
         
         $query = PlenaryMeeting::with([
             'items.item', 
@@ -48,20 +40,17 @@ class PlenaryMeetingController extends Controller
             'creator'
         ])->orderByDesc('id');
 
-        // Archive Filter
         if ($request->get('filter') === 'archived') {
             $query->onlyTrashed();
         } elseif ($request->get('show_archived') === 'true') {
             $query->withTrashed();
         }
 
-        // Search filter
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where('meeting_title', 'like', "%{$search}%");
         }
 
-        // Date range filter
         if ($request->filled('date_from')) {
             $query->where('meeting_date', '>=', $request->date_from);
         }
@@ -72,11 +61,6 @@ class PlenaryMeetingController extends Controller
         return ApiResponse::success('Plenary meetings retrieved', $query->paginate($perPage));
     }
 
-    /**
-     * List plenary meetings with unprocured items
-     * SECURITY: Admin only
-     * USE CASE: For creating new procurements
-     */
     public function listUnpronouncedPlenaryMeetings(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -84,7 +68,6 @@ class PlenaryMeetingController extends Controller
 
         $perPage = min((int) $request->get('per_page', 15), 100);
 
-        // Get plenary meetings that have at least 1 item not yet in procurement
         $query = PlenaryMeeting::with([
             'items' => function ($q) {
                 $q->doesntHave('procurementItem')
@@ -108,10 +91,6 @@ class PlenaryMeetingController extends Controller
         );
     }
 
-    /**
-     * Show plenary meeting detail
-     * SECURITY: Admin only
-     */
     public function show(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -138,17 +117,11 @@ class PlenaryMeetingController extends Controller
         return ApiResponse::success('Plenary meeting detail', $meeting);
     }
 
-    /**
-     * Create new plenary meeting
-     * TRANSACTION: Protected multi-table operation
-     * SECURITY: Admin only
-     */
     public function store(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
         if ($adminCheck) return $adminCheck;
 
-        // Validation
         $validator = Validator::make($request->all(), [
             'meeting_title' => 'required|string|max:255',
             'meeting_date' => 'required|date',
@@ -175,11 +148,9 @@ class PlenaryMeetingController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        // TRANSACTION: Create meeting + items + attendees
         try {
             DB::beginTransaction();
 
-            // Create plenary meeting
             $meeting = PlenaryMeeting::create([
                 'meeting_title' => $request->meeting_title,
                 'meeting_date' => Carbon::parse($request->meeting_date),
@@ -191,7 +162,6 @@ class PlenaryMeetingController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            // Create meeting items
             foreach ($request->items as $item) {
                 PlenaryMeetingItem::create([
                     'plenary_meeting_id' => $meeting->id,
@@ -204,7 +174,6 @@ class PlenaryMeetingController extends Controller
                 ]);
             }
 
-            // Create attendees
             if ($request->filled('attendees')) {
                 foreach ($request->attendees as $attendee) {
                     PlenaryMeetingAttendee::create([
@@ -219,14 +188,6 @@ class PlenaryMeetingController extends Controller
 
             DB::commit();
 
-            \Log::info('Plenary meeting created successfully', [
-                'meeting_id' => $meeting->id,
-                'meeting_title' => $meeting->meeting_title,
-                'items_count' => count($request->items),
-                'attendees_count' => count($request->attendees ?? []),
-                'created_by' => Auth::id(),
-            ]);
-
             return ApiResponse::success(
                 'Plenary meeting created',
                 $meeting->load('items.item', 'items.cooperative', 'attendees'),
@@ -234,23 +195,10 @@ class PlenaryMeetingController extends Controller
             );
         } catch (\Throwable $e) {
             DB::rollBack();
-
-            \Log::error('Failed to create plenary meeting', [
-                'meeting_title' => $request->meeting_title,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
             return ApiResponse::error('Failed to create plenary meeting: ' . $e->getMessage(), 500);
         }
     }
 
-    /**
-     * Update plenary meeting
-     * TRANSACTION: Protected multi-table operation
-     * SECURITY: Admin only
-     * BUSINESS RULE: Cannot delete items already in procurement
-     */
     public function update(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -265,7 +213,6 @@ class PlenaryMeetingController extends Controller
             return ApiResponse::error('Plenary meeting not found', 404);
         }
 
-        // Validation
         $validator = Validator::make($request->all(), [
             'meeting_title' => 'required|string|max:255',
             'meeting_date' => 'required|date',
@@ -292,29 +239,20 @@ class PlenaryMeetingController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        // BUSINESS RULE: Check if any items are already in procurement
         $procuredItems = $meeting->items->filter(function ($item) {
             return $item->procurementItem !== null;
         });
 
         if ($procuredItems->isNotEmpty()) {
-            \Log::warning('Attempted to update plenary meeting with procured items', [
-                'meeting_id' => $id,
-                'procured_items_count' => $procuredItems->count(),
-                'user_id' => Auth::id(),
-            ]);
-
             return ApiResponse::error(
                 'Cannot update plenary meeting: Some items are already in procurement. Please remove them from procurement first.',
                 400
             );
         }
 
-        // TRANSACTION: Update meeting + sync items + sync attendees
         try {
             DB::beginTransaction();
 
-            // Update plenary meeting
             $meeting->update([
                 'meeting_title' => $request->meeting_title,
                 'meeting_date' => Carbon::parse($request->meeting_date),
@@ -325,7 +263,6 @@ class PlenaryMeetingController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // Sync Items (delete all and recreate)
             $meeting->items()->delete();
             foreach ($request->items as $item) {
                 PlenaryMeetingItem::create([
@@ -339,7 +276,6 @@ class PlenaryMeetingController extends Controller
                 ]);
             }
 
-            // Sync Attendees
             $meeting->attendees()->delete();
             if ($request->filled('attendees')) {
                 foreach ($request->attendees as $attendee) {
@@ -355,36 +291,16 @@ class PlenaryMeetingController extends Controller
 
             DB::commit();
 
-            \Log::info('Plenary meeting updated successfully', [
-                'meeting_id' => $meeting->id,
-                'meeting_title' => $meeting->meeting_title,
-                'items_count' => count($request->items),
-                'updated_by' => Auth::id(),
-            ]);
-
             return ApiResponse::success(
                 'Plenary meeting updated',
                 $meeting->load('items.item', 'items.cooperative', 'attendees')
             );
         } catch (\Throwable $e) {
             DB::rollBack();
-
-            \Log::error('Failed to update plenary meeting', [
-                'meeting_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
             return ApiResponse::error('Failed to update plenary meeting: ' . $e->getMessage(), 500);
         }
     }
 
-    /**
-     * Delete plenary meeting (soft delete)
-     * TRANSACTION: Protected delete operation
-     * SECURITY: Admin only
-     * BUSINESS RULE: Cannot delete if items are in procurement
-     */
     public function destroy(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -399,48 +315,25 @@ class PlenaryMeetingController extends Controller
             return ApiResponse::error('Plenary meeting not found', 404);
         }
 
-        // BUSINESS RULE: Check if any items are in procurement
         $procuredItems = $meeting->items->filter(function ($item) {
             return $item->procurementItem !== null;
         });
 
         if ($procuredItems->isNotEmpty()) {
-            \Log::warning('Attempted to delete plenary meeting with procured items', [
-                'meeting_id' => $id,
-                'procured_items_count' => $procuredItems->count(),
-                'user_id' => Auth::id(),
-            ]);
-
             return ApiResponse::error(
                 'Cannot delete plenary meeting: Some items are already in procurement',
                 400
             );
         }
 
-        // TRANSACTION: Delete meeting
         try {
             DB::beginTransaction();
-
-            $meetingTitle = $meeting->meeting_title;
             $meeting->delete();
-
             DB::commit();
-
-            \Log::info('Plenary meeting deleted (archived)', [
-                'meeting_id' => $id,
-                'meeting_title' => $meetingTitle,
-                'deleted_by' => $request->user()->id,
-            ]);
 
             return ApiResponse::success('Plenary meeting deleted (archived)');
         } catch (\Throwable $e) {
             DB::rollBack();
-
-            \Log::error('Failed to delete plenary meeting', [
-                'meeting_id' => $id,
-                'error' => $e->getMessage(),
-            ]);
-
             return ApiResponse::error('Failed to delete plenary meeting: ' . $e->getMessage(), 500);
         }
     }

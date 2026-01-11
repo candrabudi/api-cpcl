@@ -11,10 +11,6 @@ use Illuminate\Support\Facades\Validator;
 
 class DocumentTypeController extends Controller
 {
-    /**
-     * Check if user is admin/superadmin
-     * SECURITY: Only admin can manage document types
-     */
     private function checkAdmin($user): ?object
     {
         if (!$user || !in_array($user->role, ['admin', 'superadmin'])) {
@@ -28,10 +24,6 @@ class DocumentTypeController extends Controller
         return null;
     }
 
-    /**
-     * List all document types
-     * SECURITY: Filter by search if provided
-     */
     public function index(Request $request)
     {
         try {
@@ -58,9 +50,6 @@ class DocumentTypeController extends Controller
         }
     }
 
-    /**
-     * Show document type detail
-     */
     public function show($id)
     {
         if (!is_numeric($id)) {
@@ -84,11 +73,6 @@ class DocumentTypeController extends Controller
         }
     }
 
-    /**
-     * Create new document type
-     * TRANSACTION: Protected create operation
-     * SECURITY: Admin only
-     */
     public function store(Request $request)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -130,11 +114,6 @@ class DocumentTypeController extends Controller
         }
     }
 
-    /**
-     * Update document type
-     * TRANSACTION: Protected update operation
-     * SECURITY: Admin only
-     */
     public function update(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());
@@ -188,11 +167,6 @@ class DocumentTypeController extends Controller
         }
     }
 
-    /**
-     * Delete document type
-     * TRANSACTION: Protected delete operation
-     * SECURITY: Admin only
-     */
     public function destroy(Request $request, $id)
     {
         $adminCheck = $this->checkAdmin($request->user());

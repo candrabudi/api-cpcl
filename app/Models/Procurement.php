@@ -19,6 +19,29 @@ class Procurement extends Model
         'created_by',
     ];
 
+    protected $appends = ['production_progress'];
+
+    public function getProductionProgressAttribute()
+    {
+        $items = $this->items()->with(['processStatuses' => function($q) {
+            $q->orderBy('id', 'desc');
+        }])->get();
+
+        $productionItems = $items->filter(function($item) {
+            return $item->plenaryMeetingItem?->item?->process_type === 'production';
+        });
+
+        if ($productionItems->isEmpty()) {
+            return 0;
+        }
+
+        $totalProgress = $productionItems->sum(function($item) {
+            return $item->processStatuses->first()?->percentage ?? 0;
+        });
+
+        return round($totalProgress / $productionItems->count(), 2);
+    }
+
     public function items()
     {
         return $this->hasMany(ProcurementItem::class);

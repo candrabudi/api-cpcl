@@ -52,10 +52,15 @@ class Handler extends ExceptionHandler
                 'status' => false,
                 'message' => 'Route not found',
                 'errors' => null,
-            ], 404);
+            ], 404)->withHeaders([
+                'Access-Control-Allow-Origin' => $request->header('Origin') ?: '*',
+                'Access-Control-Allow-Methods' => 'POST, GET, OPTIONS, PUT, DELETE, PATCH',
+                'Access-Control-Allow-Credentials' => 'true',
+                'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With, Origin, Accept, token'
+            ]);
         }
 
-        return response()->json([
+        $response = response()->json([
             'status' => false,
             'message' => 'Internal Server Error',
             'errors' => config('app.debug') ? [
@@ -65,5 +70,13 @@ class Handler extends ExceptionHandler
                 'line' => $exception->getLine(),
             ] : null,
         ], 500);
+
+        // Attach CORS headers manually for exceptions
+        $response->header('Access-Control-Allow-Origin', $request->header('Origin') ?: '*');
+        $response->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE, PATCH');
+        $response->header('Access-Control-Allow-Credentials', 'true');
+        $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept, token');
+
+        return $response;
     }
 }

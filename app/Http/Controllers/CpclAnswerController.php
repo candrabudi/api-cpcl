@@ -39,11 +39,10 @@ class CpclAnswerController extends Controller
                 CpclAnswer::updateOrCreate(
                     [
                         'cpcl_document_id' => $request->cpcl_document_id,
-                        'cpcl_applicant_id' => $cpclApplicant->id,
                         'group_field_row_id' => $answer['group_field_row_id'],
                     ],
                     [
-                        'value' => $answer['value'],
+                        'answer_value' => $answer['value'],
                     ]
                 );
             }
@@ -95,7 +94,7 @@ class CpclAnswerController extends Controller
             'row_type' => $row->row_type,
             'is_required' => $row->is_required,
             'meta' => $row->meta,
-            'value' => $answers[$row->id]->value ?? null,
+            'value' => $answers[$row->id]->answer_value ?? null,
             'children' => [],
         ];
 

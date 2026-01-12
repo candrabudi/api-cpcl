@@ -28,7 +28,6 @@ class CpclFishingVesselController extends Controller
 
         return ApiResponse::success('Fishing vessels retrieved', [
             'items' => $data,
-            'total_quantity' => $data->sum('quantity'),
         ]);
     }
 
@@ -40,10 +39,10 @@ class CpclFishingVesselController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fishing_vessels' => 'required|array|min:1',
-            'fishing_vessels.*.ship_type' => 'nullable|string|max:255',
-            'fishing_vessels.*.engine_brand' => 'nullable|string|max:255',
-            'fishing_vessels.*.engine_power' => 'nullable|string|max:100',
-            'fishing_vessels.*.quantity' => 'required|integer|min:1',
+            'fishing_vessels.*.vessel_name' => 'required|string|max:255',
+            'fishing_vessels.*.owner_name' => 'required|string|max:255',
+            'fishing_vessels.*.gt_volume' => 'nullable|string|max:100',
+            'fishing_vessels.*.vessel_type' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -66,10 +65,10 @@ class CpclFishingVesselController extends Controller
             foreach ($request->fishing_vessels as $row) {
                 CpclFishingVessel::create([
                     'cpcl_document_id' => $cpclDocumentId,
-                    'ship_type' => $row['ship_type'] ?? null,
-                    'engine_brand' => $row['engine_brand'] ?? null,
-                    'engine_power' => $row['engine_power'] ?? null,
-                    'quantity' => $row['quantity'],
+                    'vessel_name' => $row['vessel_name'],
+                    'owner_name' => $row['owner_name'],
+                    'gt_volume' => $row['gt_volume'] ?? null,
+                    'vessel_type' => $row['vessel_type'] ?? null,
                 ]);
             }
 

@@ -10,10 +10,10 @@ class CpclFishingVessel extends Model
     use SoftDeletes;
     protected $fillable = [
         'cpcl_document_id',
-        'ship_type',
-        'engine_brand',
-        'engine_power',
-        'quantity',
+        'vessel_name',
+        'owner_name',
+        'gt_volume',
+        'vessel_type',
     ];
 
     public function document()

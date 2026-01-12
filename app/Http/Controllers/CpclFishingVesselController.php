@@ -61,12 +61,6 @@ class CpclFishingVesselController extends Controller
                 return ApiResponse::error('Document not found', 400);
             }
 
-            if (in_array($document->status, ['approved', 'archived'])) {
-                DB::rollBack();
-
-                return ApiResponse::error('Document status is locked', 409);
-            }
-
             CpclFishingVessel::where('cpcl_document_id', $cpclDocumentId)->delete();
 
             foreach ($request->fishing_vessels as $row) {

@@ -20,4 +20,9 @@ class CpclApplicant extends Model
     {
         return $this->belongsTo(CpclDocument::class, 'cpcl_document_id');
     }
+
+    public function cooperative()
+    {
+        return $this->belongsTo(Cooperative::class);
+    }
 }

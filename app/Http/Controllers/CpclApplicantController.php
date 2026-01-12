@@ -26,7 +26,7 @@ class CpclApplicantController extends Controller
         try {
             $perPage = (int) $request->get('per_page', 10);
 
-            $query = CpclApplicant::with(['cooperative', 'area'])
+            $query = CpclApplicant::with(['cooperative', 'document'])
                 ->orderByDesc('id');
 
             if ($request->filled('cpcl_document_id')) {
@@ -47,7 +47,7 @@ class CpclApplicantController extends Controller
             return ApiResponse::error('Invalid applicant id', 400);
         }
 
-        $applicant = CpclApplicant::with(['cooperative', 'area'])
+        $applicant = CpclApplicant::with(['cooperative', 'document'])
             ->where('cpcl_document_id', $id)
             ->first();
 

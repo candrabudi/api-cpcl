@@ -172,7 +172,7 @@ class VendorController extends Controller
         });
 
         if ($items->isEmpty()) {
-            return ApiResponse::error('No items found for this vendor and procurement', 404);
+            return ApiResponse::error('No items found for this vendor and procurement', 400);
         }
 
         $totalSpent = $items->sum('total_price');

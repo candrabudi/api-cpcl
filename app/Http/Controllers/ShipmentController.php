@@ -375,31 +375,10 @@ class ShipmentController extends Controller
             return ApiResponse::validationError($validator->errors()->toArray());
         }
 
-        $statusOrder = [
-            'pending' => 1,
-            'prepared' => 2,
-            'shipped' => 3,
-            'delivered' => 4,
-            'received' => 5,
-        ];
-
-        $currentLevel = $statusOrder[$shipment->status] ?? 0;
-        $newLevel = $statusOrder[$request->status] ?? 0;
-
-        if (isset($statusOrder[$request->status]) && isset($statusOrder[$shipment->status])) {
-            if ($newLevel < $currentLevel) {
-                return ApiResponse::error('Cannot revert shipment status', 400);
-            }
-            if ($newLevel == $currentLevel && $request->status !== 'shipped') {
-                return ApiResponse::error('Only shipped status can be updated multiple times (e.g. for tracking)', 400);
-            }
-        }
-
         try {
             DB::beginTransaction();
 
             $oldStatus = $shipment->status;
-
             $shipment->status = $request->status;
             
             if ($request->filled('tracking_number')) {
@@ -422,15 +401,15 @@ class ShipmentController extends Controller
                 'shipment_id' => $shipment->id,
                 'status' => $request->status,
                 'notes' => $request->notes,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'latitude' => $request->filled('latitude') ? $request->latitude : null,
+                'longitude' => $request->filled('longitude') ? $request->longitude : null,
                 'area_id' => $request->area_id,
                 'created_by' => Auth::id(),
                 'changed_at' => Carbon::now(),
             ]);
 
             // Automatically create BA Pemeriksaan (Inspection Report) if all items in procurement are received
-            if ($request->status === 'received') {
+            if ($request->status === 'received' || $request->status === 'delivered') {
                 $procurementIds = $shipment->items()->with('procurementItem')
                     ->get()
                     ->pluck('procurementItem.procurement_id')
@@ -484,7 +463,7 @@ class ShipmentController extends Controller
                                 'inspection_report_id' => $report->id,
                                 'procurement_item_id' => $procItem->id,
                                 'expected_quantity' => $procItem->quantity,
-                                'actual_quantity' => $procItem->quantity, // Pre-fill with expected
+                                'actual_quantity' => $procItem->quantity,
                                 'is_matched' => true,
                                 'condition' => 'Good',
                             ]);

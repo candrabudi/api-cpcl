@@ -85,7 +85,7 @@ class CpclFishingVesselController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return ApiResponse::error('Failed to save fishing vessels', 500);
+            return ApiResponse::error('Failed to save fishing vessels: ' . $e->getMessage(), 500);
         }
 
         return ApiResponse::success('Fishing vessels saved');

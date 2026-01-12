@@ -43,7 +43,7 @@ class GroupFieldController extends Controller
         }
 
         try {
-            $document = GroupField::with(['rows.allChildren'])
+            $document = GroupField::with(['rows.children'])
                 ->where('id', $id)
                 ->first();
 

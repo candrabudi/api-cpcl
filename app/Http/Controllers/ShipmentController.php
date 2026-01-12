@@ -251,7 +251,6 @@ class ShipmentController extends Controller
             'longitude' => 'nullable|numeric',
             'items' => 'required|array|min:1',
             'items.*.procurement_item_id' => 'required|exists:procurement_items,id',
-            'items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -282,22 +281,17 @@ class ShipmentController extends Controller
                         }
                     }
 
-                    // Automatically use remaining quantity or requested quantity
+                    // Automatically use all remaining quantity
                     $totalShipped = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
                         ->whereHas('shipment', function($q) {
                             $q->where('status', '!=', 'cancelled');
                         })
                         ->sum('quantity');
                     
-                    $remainingQty = $procurementItem->quantity - $totalShipped;
-                    $quantityToShip = $itemData['quantity'] ?? $remainingQty;
+                    $quantityToShip = $procurementItem->quantity - $totalShipped;
 
                     if ($quantityToShip <= 0) {
                         throw new \Exception("Item '{$itemModel->name}' has no remaining quantity to ship.");
-                    }
-
-                    if ($quantityToShip > $remainingQty) {
-                        throw new \Exception("Requested quantity for '{$itemModel->name}' exceed remaining quantity ({$remainingQty}).");
                     }
 
                     ShipmentItem::create([

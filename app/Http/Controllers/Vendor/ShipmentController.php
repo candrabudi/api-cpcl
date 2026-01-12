@@ -229,33 +229,24 @@ class ShipmentController extends Controller
                     }
                 }
 
-                // Quantity Logic
-                $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
-                    ->whereHas('shipment', function($q) {
-                        $q->where('status', '!=', 'cancelled');
-                    })
-                    ->sum('quantity');
-                $remainingQty = $procurementItem->quantity - $shippedQty;
+                // Quantity Logic (Automated)
+            $shippedQty = \App\Models\ShipmentItem::where('procurement_item_id', $procurementItem->id)
+                ->whereHas('shipment', function($q) {
+                    $q->where('status', '!=', 'cancelled');
+                })
+                ->sum('quantity');
+            
+            $quantityToShip = $procurementItem->quantity - $shippedQty;
 
-                $quantityToShip = $remainingQty;
-                if (isset($itemData['quantity']) && is_numeric($itemData['quantity'])) {
-                    $quantityToShip = (int) $itemData['quantity'];
-                }
+            if ($quantityToShip <= 0) {
+                 throw new \Exception("Item '{$procurementItem->id}' has no remaining quantity to ship.");
+            }
 
-                if ($quantityToShip <= 0) {
-                     throw new \Exception("Invalid quantity to ship for item '{$procurementItem->id}'. Must be greater than 0.");
-                }
-
-                if ($quantityToShip > $remainingQty) {
-                    $itemName = $procurementItem->plenaryMeetingItem->item->name ?? 'Unknown Item';
-                    throw new \Exception("Quantity for '$itemName' ($quantityToShip) exceeds remaining quantity ($remainingQty).");
-                }
-
-                ShipmentItem::create([
-                    'shipment_id' => $shipment->id,
-                    'procurement_item_id' => $procurementItem->id,
-                    'quantity' => $quantityToShip,
-                ]);
+            ShipmentItem::create([
+                'shipment_id' => $shipment->id,
+                'procurement_item_id' => $procurementItem->id,
+                'quantity' => $quantityToShip,
+            ]);
 
                 // Auto-update parent procurement status from 'draft' to 'processed'
                 $parentProcurement = $procurementItem->procurement;

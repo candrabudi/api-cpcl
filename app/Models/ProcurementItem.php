@@ -25,7 +25,8 @@ class ProcurementItem extends Model
         'current_attribute',
         'item_name',
         'item_type_name',
-        'process_type'
+        'process_type',
+        'cooperative_name'
     ];
 
     public function getCurrentPercentageAttribute()
@@ -53,6 +54,11 @@ class ProcurementItem extends Model
     public function getProcessTypeAttribute()
     {
         return $this->item?->process_type;
+    }
+
+    public function getCooperativeNameAttribute()
+    {
+        return $this->plenaryMeetingItem?->cooperative?->name;
     }
 
     public function procurement()

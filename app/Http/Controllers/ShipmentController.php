@@ -89,7 +89,8 @@ class ShipmentController extends Controller
         $shipment = Shipment::withTrashed()->with([
             'vendor',
             'items.procurementItem.item.type',
-            'items.procurementItem.plenaryMeetingItem.item.type'
+            'items.procurementItem.plenaryMeetingItem.item.type',
+            'items.procurementItem.plenaryMeetingItem.cooperative'
         ])->find($id);
 
         if (!$shipment) {

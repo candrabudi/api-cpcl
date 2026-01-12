@@ -55,7 +55,7 @@ class InspectionReportController extends Controller
         foreach ($procurement->items as $pItem) {
             $totalShipped = \App\Models\ShipmentItem::where('procurement_item_id', $pItem->id)
                 ->whereHas('shipment', function($q) {
-                    $q->where('status', 'delivered');
+                    $q->whereIn('status', ['delivered', 'received']);
                 })
                 ->sum('quantity');
             

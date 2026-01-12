@@ -408,69 +408,16 @@ class ShipmentController extends Controller
                 'changed_at' => Carbon::now(),
             ]);
 
-            // Automatically create BA Pemeriksaan (Inspection Report) if all items in procurement are received
-            if ($request->status === 'received' || $request->status === 'delivered') {
-                $procurementIds = $shipment->items()->with('procurementItem')
-                    ->get()
-                    ->pluck('procurementItem.procurement_id')
-                    ->unique();
+            // Trigger BA generation check for procurement if shipment reaches delivered/received status
+            if (in_array($request->status, ['delivered', 'received'])) {
+                $procurementIds = \App\Models\ShipmentItem::where('shipment_id', $shipment->id)
+                    ->join('procurement_items', 'shipment_items.procurement_item_id', '=', 'procurement_items.id')
+                    ->distinct()
+                    ->pluck('procurement_items.procurement_id');
 
-                foreach ($procurementIds as $procId) {
-                    $procurement = Procurement::with('items')->find($procId);
-                    if (!$procurement) continue;
-
-                    // Check if BA already exists for this procurement
-                    $exists = InspectionReport::where('procurement_id', $procId)->exists();
-                    if ($exists) continue;
-
-                    // Check if all items in this procurement are fully received
-                    $allReceived = true;
-                    foreach ($procurement->items as $procItem) {
-                        $totalReceived = ShipmentItem::where('procurement_item_id', $procItem->id)
-                            ->whereHas('shipment', function($q) {
-                                $q->where('status', 'received');
-                            })->sum('quantity');
-
-                        if ($totalReceived < $procItem->quantity) {
-                            $allReceived = false;
-                            break;
-                        }
-                    }
-
-                    if ($allReceived) {
-                        $reportNumber = 'BAP/' . Carbon::now()->format('Ymd') . '/' . $procurement->procurement_number;
-                        
-                        // Ensure unique report number
-                        $count = 1;
-                        $originalReportNumber = $reportNumber;
-                        while(InspectionReport::where('report_number', $reportNumber)->exists()) {
-                            $reportNumber = $originalReportNumber . '-' . $count;
-                            $count++;
-                        }
-
-                        $report = InspectionReport::create([
-                            'procurement_id' => $procId,
-                            'shipment_id' => $shipment->id,
-                            'report_number' => $reportNumber,
-                            'inspection_date' => Carbon::now(),
-                            'status' => 'draft',
-                            'created_by' => Auth::id(),
-                            'notes' => 'Otomatis dibuat setelah semua item pengadaan diterima.',
-                        ]);
-
-                        foreach ($procurement->items as $procItem) {
-                            InspectionReportItem::create([
-                                'inspection_report_id' => $report->id,
-                                'procurement_item_id' => $procItem->id,
-                                'expected_quantity' => $procItem->quantity,
-                                'actual_quantity' => $procItem->quantity,
-                                'is_matched' => true,
-                                'condition' => 'Good',
-                            ]);
-                        }
-
-                        \Log::info("Auto-created Inspection Report for Procurement: {$procurement->procurement_number}");
-                    }
+                $inspectionCtrl = new \App\Http\Controllers\InspectionReportController();
+                foreach ($procurementIds as $pId) {
+                    $inspectionCtrl->generateForProcurement($pId);
                 }
             }
 

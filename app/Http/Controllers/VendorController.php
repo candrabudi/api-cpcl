@@ -162,6 +162,15 @@ class VendorController extends Controller
         ->where('procurement_id', $procurementID)
         ->get();
 
+        // Filter: Only include production items that are 100% complete.
+        // Purchase items are always included.
+        $items = $items->filter(function ($item) {
+            if ($item->process_type === 'production') {
+                return $item->current_percentage >= 100;
+            }
+            return true;
+        });
+
         if ($items->isEmpty()) {
             return ApiResponse::error('No items found for this vendor and procurement', 404);
         }
